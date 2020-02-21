@@ -706,7 +706,7 @@ ordenarProcesos(){
 	for((i=1;i<numProc;i++)) do
 		minLlegada=$i
 		for((j=i+1;j<=numProc;j++)) do
-			if [ ${procesos[$j,2]} -lt ${procesos[$minLlegada,2]} ]; then #compara el tiempo de llegada
+			if [ ${procesos[$j,$P_TLLEGADA]} -lt ${procesos[$minLlegada,$P_TLLEGADA]} ]; then #compara el tiempo de llegada
 					minLlegada=$j
 			fi
 		done
