@@ -950,20 +950,21 @@ ejecucion(){
 		echo -e "________________________________________________________________________________________________\nTiempo de ejecución: $tiempoEjec\n" > temp
 		cambio=0
 		#comprueba si el tiempo de ejecución restante del proceso en CPU ha terminado
-		if [ ${procesos[$procesoCPU,6]} = 0 ]; then 
+		if [ ${procesos[$procesoCPU,$P_TRESTANTE]} = 0 ]; then 
 			echo -e "\t${B_RED}${procesos[$procesoCPU,1]} [Prior. ${procesos[$procesoCPU,4]}]${NC}${L_CYAN} termina su ejecución y ${NC}${B_BLUE} Partición $partCPU${NC}${L_CYAN} liberada${NC}"
 			echo -e "${procesos[$procesoCPU,1]} [Prior. ${procesos[$procesoCPU,4]}] termina su ejecución y Partición $partCPU liberada" >> temp
-			procesos[$procesoCPU,8]=$tiempoEjec #asigna el tiempo de ejecucion actual al tiempo de retorno
-			procesos[$procesoCPU,9]="Fin"
+			procesos[$procesoCPU,$P_TRETORNO]=$tiempoEjec #asigna el tiempo de ejecucion actual al tiempo de retorno
+			procesos[$procesoCPU,$P_ESTADO]="Fin"
 			((procEjecutados++))
 
-			tEjecAcumulado=$[$tEjecAcumulado + ${procesos[$procesoCPU,3]}]
-			tEsperaAcumulado=$[$tEsperaAcumulado + ${procesos[$procesoCPU,7]}]
-			tRetornoAcumulado=$[$tRetornoAcumulado + ${procesos[$procesoCPU,8]}]			
+			tEjecAcumulado=$[$tEjecAcumulado + ${procesos[$procesoCPU,$P_TEJECUCION]}]
+			tEsperaAcumulado=$[$tEsperaAcumulado + ${procesos[$procesoCPU,$P_TESPER]}]
+			tRetornoAcumulado=$[$tRetornoAcumulado + ${procesos[$procesoCPU,$P_TRETORNO]}]
+
 			tEjecMedio=`echo "scale=2;$tEjecAcumulado/$procEjecutados" | bc -l`
 			tEsperaMedio=`echo "scale=2;$tEsperaAcumulado/$procEjecutados" | bc -l`
 			tRetornoMedio=`echo "scale=2;$tRetornoAcumulado/$procEjecutados" | bc -l`
-
+			
 			procesoCPU=0
 			((partLibres++))
 			memoria[$partCPU]=0
@@ -1084,7 +1085,7 @@ ejecucion2020(){
 
 }
 
-funcionDeTesteo
+#funcionDeTesteo
 
 #main
 cargaDatos $opcionYN
@@ -1094,6 +1095,9 @@ inicializarArrays
 clear
 imprimirTabla 1 2 3 4 5
 informeTabla 1 2 3 4 5
+breakpoint impresionTablaWapa
+imprimirTabla 10
+
 echo -e "
 ╔═══════════════════════════════════════╗
 ║					║
@@ -1121,6 +1125,7 @@ escribirInforme "
 imprimirLCyan "Pulsa enter para continuar" -n
 read -s
 ejecucion
+
 scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
 if [ $abrirInforme = "s" ]; then
 	more informePrioridadMenor.txt
