@@ -3,6 +3,10 @@
 resize -s 50 120 >/dev/null
 clear
 
+
+
+
+
 echo -e "\e[0;36m			╔══════════════════════════════════════════════════════════╗\e[0m"
 echo -e "\e[0;36m			║\e[0m                     Creative Commons                     \e[0;36m║\e[0m"
 echo -e "\e[0;36m			║\e[0m                                                          \e[0;36m║\e[0m"
@@ -103,8 +107,10 @@ declare -r B_WHITE='\e[1;97m'
 #Fin de color
 declare -r NC='\e[0m' 
 
+#Colores de FONDO:
 declare -r _GREEN='\e[42m'
 declare -r _RED='\e[41m'
+declare -r _YELLOW='\e[43m'
 
 #
 #	Declares 2020:
@@ -131,6 +137,16 @@ declare -r P_ESTADO=9
 declare -r P_PID=0
 declare -r P_COLOR=10
 
+
+#DEBUG (Variables globales):
+DEFAULT_DEBUG_OUTPUT_FILE_NAME="debug.txt"
+DEBUG_ENABLE=true
+DEBUG_FIRST_EXECUTION=true
+DEBUG_PERSISTENT_FILE=false
+
+
+
+
 # Nombre: escribirInforme
 # Descripcion: escribe en el archivo informePrioridadMenor.txt
 # @param $1: texto a escribir en el informe
@@ -140,12 +156,51 @@ escribirInforme(){
 }
 
 # Nombre: imprimirAviso
-# Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras
+# Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras.
 # @param $1: texto de aviso 
+# Cambios 2020: Como hemos añadido la funcion imprimirErrorCritico, he cambiado el color de fondo de ROJO a AMARILLO/NARANJA (Depende del terminal)
 imprimirAviso(){
-	echo -e "\n${BOLD}${_RED}\xE2\x9A\xA0 $1 ${NC}\n" #\xE2\x9A\xA0 significa icono de alerta
+	echo -e "\n${B_BLACK}${_YELLOW}\xE2\x9A\xA0  $1 ${NC}\n" #\xE2\x9A\xA0 significa icono de alerta
+	imprimirErrorCritico "Te moriste wey"
 }
 
+# Nombre: imprimirErrorCritico
+# Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras.
+# @param $1: texto de aviso
+imprimirErrorCritico(){
+	echo -e "\n${BOLD}${_RED}❌  $1 ${NC}\n"
+}
+
+# Nombre: salirPorErroCritico
+# Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras y para la ejecucion.
+# @param $1: texto de aviso
+# Date 21/02/2020
+#//@see  ErrorCritio
+#//@see  forzarCierre
+salirPorErrorCritico(){
+	imprimirErrorCritico $1
+	forzarCierre
+}
+
+# Nombre: forzarCierre
+# Descripcion: Ejecuta una serie de comandos antes de salir, perfecta para borrar archivo u otras cosas por si no es válida la ejecución!
+# Date: 21/02/2020
+# //@see deleteGeneratedFiles
+forzarCierre(){
+	deleteGeneratedFiles
+}
+
+
+# Nombre: FuncionDeTesteo
+# Descripción: Función simple que ejecuta un código aislado, sin ensuciar el main
+# Detalles: Es necesario llegar hasta el final del archivo para cargar todas las funciones, si se queire probar algo que no ha sido cargado, es un poco incómod
+# esta función puede ser tratada como un main aislado, el objetivo es probar el código de años anteriores sin necesidad de ejecutar todo el programa
+# Date: 21/02/2020
+funcionDeTesteo(){
+
+	imprimirAviso "Pole bro"
+
+}
 # Nombre: imprimirLCyan
 # Descripcion: imprime en pantalla el text de color cyan claro
 # @param $1: texto a imprimir en cyan claro
@@ -410,6 +465,7 @@ menuAlgoritmo(){
 # Date: 21/02/2020
 # Descripción: Permite realizar una parada del programa en cualquier punto del código hasta que no se realizar una entrada por teclado.
 # Uso: Activar o desactivar la variable global $BREAKPOINT_ENABLED para activar o desactivar los breakpoints.
+# Globales: BREAKPOINT_ENABLED
 # @param $@: Imprime todos los stings pasados como argumento, por si se quieren visualizar variables. 
 breakpoint(){
 	
@@ -427,8 +483,65 @@ breakpoint(){
 	fi
 }
 
+# Nombre: debug (y sus muchas funciones)
+# Date: 21/02/2020
+# Descripción: Permite imprimir un string en un fichero a parte, y que este sea visualizado desde otro terminal
+# Uso: alternar los booleanos globales
+# Globales:DEFAULT_DEBUG_OUTPUT_FILE_NAME, DEBUG_ENABLE, DEBUG_FIRST_EXECUTION, DEBUG_PERSISTENT_FILE
+# @param $1: String a imprimir
+debug(){
+  
+  if [[ $DEBUG_ENABLE == false ]]; then
+    return 0
+  fi
+
+  mensajeEntadaDebug(){
+    printf "Introduzca el comando \$tail -f $DEFAULT_DEBUG_OUTPUT_FILE_NAME para obtener el debug\n"
+   
+  }
+  cleanDebugFile(){
+    if [[ $DEBUG_PERSISTENT_FILE == false ]]; then
+     echo "" > $DEFAULT_DEBUG_OUTPUT_FILE_NAME
+    fi
+  }
+
+  cabeceraDebug(){
+    printf "%s\n-----------------------------------------------\n" "$(date '+%d/%m/%Y %H:%M:%S')" >> $DEFAULT_DEBUG_OUTPUT_FILE_NAME
+
+  }
+
+
+  if [[ $DEBUG_FIRST_EXECUTION == true ]]; then
+    cleanDebugFile
+    mensajeEntadaDebug
+    cabeceraDebug
+    DEBUG_FIRST_EXECUTION=false
+  fi
+  echo -e "$1" >> $DEFAULT_DEBUG_OUTPUT_FILE_NAME
+  
+}
+
+# Nombre: deleteGeneratedFiles
+# Date: 21/02/2020
+# Descripción: Borra aquellos archivos que han sido generados por el programa. Es necesario indicar los archivos a borrar
+# Uso: Añadir los archvios, pereferiblemente, comprobar antes de borrar si existen
+deleteGeneratedFiles(){
+if [[ -f $DEFAULT_DEBUG_OUTPUT_FILE_NAME ]]; then
+	rm $DEFAULT_DEBUG_OUTPUT_FILE_NAME >> /dev/null
+fi
+
+if [[ -f $DEFAULT_LOG_FILE_NAME ]]; then
+	rm $DEFAULT_LOG_FILE_NAME >> /dev/null
+fi
+#TOFILL
+}
+
+
 # Nombre: establecerPrioridad
 # Descripcion: establece el tipo de prioridad considerando priorMin y priorMax. El valor se usara para comparar en la ejecución
+#
+# Nota 2020:
+# Globales: tipoPrioridad
 establecerPrioridad(){
 	#si priorMin es un número más pequeño que priorMax el tipo de prioridad es menor
 	if [ $priorMin -le $priorMax ]; then
@@ -785,6 +898,7 @@ escribirParticion(){
 # Nombre: setCPU
 # Descripcion: introduce un proceso en CPU si esta libre o hay otro proceso con menor prioridad
 # @param $1: boolean que indica si ha habido un cambio en la CPU
+#
 setCPU(){
 	local -i menorPrioridad
 	menorPrioridad=$procesoCPU
@@ -965,7 +1079,12 @@ ejecucion(){
 	
 }
 
+ejecucion2020(){
+	clear
 
+}
+
+funcionDeTesteo
 
 #main
 cargaDatos $opcionYN
