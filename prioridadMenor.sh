@@ -49,7 +49,7 @@ declare opcionApropiativo
 declare opcionEstatico
 declare -A procesos
 declare -a memoria
-declare -a cabeceraProcesos=("NULL" "NOMBRE PROCESO" "T.LLEGADA" "T.EJECUCIÓN" "PRIORIDAD" "MEMORIA" "T.EJEC.REST" "T.ESPERA" "T.RETORNO" "ESTADO ACTUAL")
+declare -a cabeceraProcesos=("PID" "NOMBRE PROCESO" "T.LLEGADA" "T.EJECUCIÓN" "PRIORIDAD" "MEMORIA" "T.EJEC.REST" "T.ESPERA" "T.RETORNO" "ESTADO ACTUAL")
 declare -a cola
 declare -r numCol=5
 declare -i numProc=0
@@ -108,9 +108,9 @@ declare -r _GREEN='\e[42m'
 declare -r _RED='\e[41m'
 declare -r _YELLOW='\e[43m'
 
-#
+#	######################################
 #	Declares 2020:
-#
+#	######################################
 
 # Variable de control de BREAKPOINTS 
 #//@see breakpoint
@@ -119,26 +119,55 @@ declare BREAKPOINT_ENABLED=true
 #Valores de la estructura/struc (El array bidimensional procesos)
 #//@see procesos
 #Los siguientes valores (1-9) son las posiciones del struct existentes a las versiones previas a 2020
-declare -r P_NOMBRE=1
-declare -r P_TLLEGADA=2
-declare -r P_TEJECUCION=3
-declare -r P_PRIORIDAD=4
-declare -r P_TAMANIO=5
-declare -r P_TRESTANTE=6
-declare -r P_TESPERA=7
-declare -r P_TRETORNO=8
-declare -r P_ESTADO=9
+declare -r P_NOMBRE=1		#	$P_NOMBRE
+declare -r P_TLLEGADA=2		#	$P_TLLEGADA
+declare -r P_TEJECUCION=3	#	$P_TEJECUCION
+declare -r P_PRIORIDAD=4	#	$P_PRIORIDAD
+declare -r P_TAMANIO=5		#	$P_TAMANIO
+declare -r P_TRESTANTE=6	#	$P_TRESTANTE
+declare -r P_TESPERA=7		#	$P_TESPERA
+declare -r P_TRETORNO=8		#	$P_TRETORNO
+declare -r P_ESTADO=9		#	$P_ESTADO
 
 #Valores 2020:
 declare -r P_PID=0
 declare -r P_COLOR=10
 
 
+
+
+
+
+
+#Ficheros:
+declare -r INFORME_FILENAME="informePrioridadMayor.txt"
+
+
 #DEBUG (Variables globales):
-DEFAULT_DEBUG_OUTPUT_FILE_NAME="debug.txt"
-DEBUG_ENABLE=true
-DEBUG_FIRST_EXECUTION=true
-DEBUG_PERSISTENT_FILE=false
+declare -r DEFAULT_DEBUG_OUTPUT_FILE_NAME="debug.txt"
+declare -r DEBUG_ENABLE=true
+declare -r DEBUG_FIRST_EXECUTION=true
+declare -r DEBUG_PERSISTENT_FILE=false
+
+
+
+
+
+
+#TODO generales:
+#	-Verificación de que el script se está ejecutando desde ./script.sh ó script.sh, y que no hay más carpetas antes.
+#	
+#
+#
+#
+#
+#
+#
+#
+#
+
+
+
 
 
 # Nombre: escribirInforme
@@ -339,9 +368,9 @@ comprobarRepite(){
 	local -i i
 	local boolean=1
 	for (( i=1; i<=numProc&&boolean==1; i++)) do
-		if  [ ${procesos[$i,1]} = ${procesos[$1,1]} -a $i -ne $1 ] 2>/dev/null; then
+		if  [ ${procesos[$i,$P_NOMBRE]} = ${procesos[$1,$P_NOMBRE]} -a $i -ne $1 ] 2>/dev/null; then
 			boolean=0
-			scanfString "El nombre del proceso ${procesos[$1,1]} ya existe. Introduce otro nombre: " procesos[$1,1]
+			scanfString "El nombre del proceso ${procesos[$1,$P_NOMBRE]} ya existe. Introduce otro nombre: " procesos[$1,$P_NOMBRE]
 			comprobarRepite $1
 		fi
 	done
@@ -403,8 +432,11 @@ cargaDatos(){
 	;;
 	esac
 	#copia en la columna 6 el tiempo de ejecución. La columna 6 se usa como T.Ejec restante
+	
+	#TODO: Añádir en esta zona: Asignación de PID; Asignación Color
+	#		Igual añadir una función que asigne el T_restante / inicialice. 
 	for ((i=1;i<=$numProc;i++)) do
-		procesos[$i,6]=${procesos[$i,3]}
+		procesos[$i,$P_TRESTANTE]=${procesos[$i,$P_TEJECUCION]}
 	done
 }
 
@@ -559,20 +591,22 @@ datosManualProcesos(){
 	local -i j
 	clear
 	imprimirTabla 1 2 3 4 5
-	scanfString "Nombre del proceso $1: " procesos[$1,1]
+	#TODO: Nombre procesos autómaticos
+	scanfString "Nombre del proceso $1: " procesos[$1,$P_NOMBRE]
 	comprobarRepite $1
 	clear
 	imprimirTabla 1 2 3 4 5
-	scanfNum "¿Tiempo de llegada del proceso $1?: " procesos[$1,2] 0
+	scanfNum "¿Tiempo de llegada del proceso $1?: " procesos[$1,$P_TLLEGADA] 0
 	clear
 	imprimirTabla 1 2 3 4 5
-	scanfNum "¿Tiempo de ejecución del proceso $1?: " procesos[$1,3] 1
+	scanfNum "¿Tiempo de ejecución del proceso $1?: " procesos[$1,$P_TEJECUCION] 1
 	clear
 	imprimirTabla 1 2 3 4 5
-	scanfNumMinMax "¿Prioridad del proceso $1?: " procesos[$1,4] $priorMin $priorMax
+	scanfNumMinMax "¿Prioridad del proceso $1?: " procesos[$1,$P_PRIORIDAD] $priorMin $priorMax
 	clear
 	imprimirTabla 1 2 3 4 5
-	scanfNumMinMax "¿Tamaño del proceso $1? (Menor o igual del tamaño de partición [$tamPart] ): " procesos[$1,5] 1 $tamPart
+	#TODO: Sustituir por el tamaño máximo de la memoria. 
+	scanfNumMinMax "¿Tamaño del proceso $1? (Menor o igual del tamaño de partición [$tamPart] ): " procesos[$1,$P_TAMANIO] 1 $tamPart
 	clear
 	imprimirTabla 1 2 3 4 5
 	scanfSiNo "¿Estas seguro de los datos del último proceso introducido? [s/n]: " seguro
@@ -629,6 +663,9 @@ datosFichero(){
 comprobarDatosFichero(){
 	local -i i
 	local -i j
+	#TODO: Sustituir particiones por el tamaño de memoria.
+	#TODO: Eliminar número de particiones.
+	
 	comprobarRango "El tamaño de particiones es incorrecto, tendrás que introducir por teclado otro número: " $tamPart tamPart 1 999999
 	comprobarRango "El número de particiones es incorrecto, tendrás que introducir por teclado otro número: " $numPart numPart 1 999999
 	comprobarSN "Opcion apropiativo incorrecto, tendrás que introducir por teclado [s/n]:" $opcionApropiativo opcionApropiativo
@@ -639,16 +676,16 @@ comprobarDatosFichero(){
 					comprobarRepite $i 
 				;;
 				2)
-					comprobarRango "El tiempo de llegada del proceso ${procesos[$i,1]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 0 999999 
+					comprobarRango "El tiempo de llegada del proceso ${procesos[$i,$P_NOMBRE]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 0 999999 
 				;;
 				3)
-					comprobarRango "El tiempo de ejecución del proceso ${procesos[$i,1]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 1 999999 
+					comprobarRango "El tiempo de ejecución del proceso ${procesos[$i,$P_NOMBRE]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 1 999999 
 				;;
 				4)
-					comprobarRango "La prioridad del proceso ${procesos[$i,1]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] $priorMin $priorMax 
+					comprobarRango "La prioridad del proceso ${procesos[$i,$P_NOMBRE]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] $priorMin $priorMax 
 				;;
 				5)
-					comprobarRango "El tamaño del proceso ${procesos[$i,1]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 1 $tamPart 
+					comprobarRango "El tamaño del proceso ${procesos[$i,$P_NOMBRE]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 1 $tamPart 
 				;;
 			esac
 		done
@@ -668,11 +705,11 @@ datosAleatorios(){
 	numAleatorio priorMax -30 30
 	establecerPrioridad
 	for ((i=1; i<=numProc; i++)) do 
-		procesos[$i,1]="P$i"
-		numAleatorio procesos[$i,2] 0 15 #numero aleatorio de t.llegada entre 0 y 15
-		numAleatorio procesos[$i,3] 1 10 #numero aleatorio de t.ejec entre 0 y 10		
-		numAleatorio procesos[$i,4] $priorMin $priorMax #numero aleatorio de prioridad entre prioriMin y priorMax
-		numAleatorio procesos[$i,5] 1 $tamPart #numero aleatorio de tamaño entre 1 y tamPart
+		procesos[$i,P_NOMBRE]="P$i"
+		numAleatorio procesos[$i,$P_TLLEGADA] 0 15 #numero aleatorio de t.llegada entre 0 y 15
+		numAleatorio procesos[$i,$P_TEJECUCION] 1 10 #numero aleatorio de t.ejec entre 0 y 10		
+		numAleatorio procesos[$i,$P_PRIORIDAD] $priorMin $priorMax #numero aleatorio de prioridad entre prioriMin y priorMax
+		numAleatorio procesos[$i,$P_TAMANIO] 1 $tamPart #numero aleatorio de tamaño entre 1 y tamPart
 	done
 }
 
@@ -706,7 +743,7 @@ ordenarProcesos(){
 	for((i=1;i<numProc;i++)) do
 		minLlegada=$i
 		for((j=i+1;j<=numProc;j++)) do
-			if [ ${procesos[$j,2]} -lt ${procesos[$minLlegada,2]} ]; then #compara el tiempo de llegada
+			if [ ${procesos[$j,$P_TLLEGADA]} -lt ${procesos[$minLlegada,$P_TLLEGADA]} ]; then #compara el tiempo de llegada
 					minLlegada=$j
 			fi
 		done
@@ -804,16 +841,16 @@ inicializarArrays(){
 	done
     cola[1]=0
 	for((i=1;i<=numProc;i++)) do #ponemos a 0 el tiempo de espera de todos los procesos
-		procesos[$i,7]=0
+		procesos[$i,$P_TESPERA]=0
 	done
 	#inicializamos de datos predeterminados los de la fila 0, fila usada como indice en caso de que una memoria o cpu este vacio
-	procesos[0,2]=0
-	procesos[0,5]=0
-	procesos[0,6]=-1
+	procesos[0,$P_TLLEGADA]=0
+	procesos[0,$P_TAMANIO]=0
+	procesos[0,$P_TRESTANTE]=-1
 	if [ $tipoPrioridad = "-lt" ]; then
-		procesos[0,4]=$(($priorMax + 1))
+		procesos[0,$P_PRIORIDAD]=$(($priorMax + 1))
 	else
-		procesos[0,4]=$(($priorMax - 1))
+		procesos[0,$P_PRIORIDAD]=$(($priorMax - 1))
 	fi
 }
 
@@ -824,7 +861,7 @@ inicializarArrays(){
 anadirCola(){
 	((tamCola++))
     cola[$tamCola]=$1
-	procesos[$1,9]="Cola"
+	procesos[$1,$P_ESTADO]="Cola"
 }
 
 # Nombre: eliminarCola
