@@ -3,10 +3,6 @@
 resize -s 50 120 >/dev/null
 clear
 
-
-
-
-
 echo -e "\e[0;36m			╔══════════════════════════════════════════════════════════╗\e[0m"
 echo -e "\e[0;36m			║\e[0m                     Creative Commons                     \e[0;36m║\e[0m"
 echo -e "\e[0;36m			║\e[0m                                                          \e[0;36m║\e[0m"
@@ -145,8 +141,6 @@ DEBUG_FIRST_EXECUTION=true
 DEBUG_PERSISTENT_FILE=false
 
 
-
-
 # Nombre: escribirInforme
 # Descripcion: escribe en el archivo informePrioridadMenor.txt
 # @param $1: texto a escribir en el informe
@@ -161,14 +155,13 @@ escribirInforme(){
 # Cambios 2020: Como hemos añadido la funcion imprimirErrorCritico, he cambiado el color de fondo de ROJO a AMARILLO/NARANJA (Depende del terminal)
 imprimirAviso(){
 	echo -e "\n${B_BLACK}${_YELLOW}\xE2\x9A\xA0  $1 ${NC}\n" #\xE2\x9A\xA0 significa icono de alerta
-	imprimirErrorCritico "Te moriste wey"
 }
 
 # Nombre: imprimirErrorCritico
 # Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras.
 # @param $1: texto de aviso
 imprimirErrorCritico(){
-	echo -e "\n${BOLD}${_RED}❌  $1 ${NC}\n"
+	echo -e "\n${B_BLACK}${_RED}❌  $1 ${NC}\n"
 }
 
 # Nombre: salirPorErroCritico
@@ -178,7 +171,7 @@ imprimirErrorCritico(){
 #//@see  ErrorCritio
 #//@see  forzarCierre
 salirPorErrorCritico(){
-	imprimirErrorCritico $1
+	imprimirErrorCritico "$1"
 	forzarCierre
 }
 
@@ -187,7 +180,13 @@ salirPorErrorCritico(){
 # Date: 21/02/2020
 # //@see deleteGeneratedFiles
 forzarCierre(){
+	local buffer
+	imprimirErrorCritico "Cerrando por fallo, pulse [Enter] para continuar"
+	read buffer
+
 	deleteGeneratedFiles
+	clear
+	exit 0
 }
 
 
@@ -198,9 +197,10 @@ forzarCierre(){
 # Date: 21/02/2020
 funcionDeTesteo(){
 
-	imprimirAviso "Pole bro"
+	salirPorErrorCritico "Se entero de que los kapopers no bieneron a su ciudad"
 
 }
+
 # Nombre: imprimirLCyan
 # Descripcion: imprime en pantalla el text de color cyan claro
 # @param $1: texto a imprimir en cyan claro
