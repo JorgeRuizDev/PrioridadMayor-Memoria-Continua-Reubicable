@@ -114,7 +114,22 @@ declare -r _RED='\e[41m'
 #//@see breakpoint
 declare BREAKPOINT_ENABLED=true
 
+#Valores de la estructura/struc (El array bidimensional procesos)
+#//@see procesos
+#Los siguientes valores (1-9) son las posiciones del struct existentes a las versiones previas a 2020
+declare -r P_NOMBRE=1
+declare -r P_TLLEGADA=2
+declare -r P_TEJECUCION=3
+declare -r P_PRIORIDAD=4
+declare -r P_TAMANIO=5
+declare -r P_TRESTANTE=6
+declare -r P_TESPERA=7
+declare -r P_TRETORNO=8
+declare -r P_ESTADO=9
 
+#Valores 2020:
+declare -r P_PID=0
+declare -r P_COLOR=10
 
 # Nombre: escribirInforme
 # Descripcion: escribe en el archivo informePrioridadMenor.txt
@@ -320,14 +335,17 @@ cargaDatos(){
 			datosManualProcesos $numProc
 			scanfSiNo "¿Quieres meter mas procesos? [s/n]:" masProc
 		done
-		;;
+	;;
 	2)
-		datosFichero;;
-    	3)
+		datosFichero
+	;;
+    3)
 		menuAlgoritmo
-		datosAleatorios;;
+		datosAleatorios
+	;;
 	4)
-		fin_programa;;
+		fin_programa
+	;;
 	esac
 	#copia en la columna 6 el tiempo de ejecución. La columna 6 se usa como T.Ejec restante
 	for ((i=1;i<=$numProc;i++)) do
@@ -397,9 +415,15 @@ breakpoint(){
 	
 	if [[ $BREAKPOINT_ENABLED = true ]]; then
 		local bufferTemporal
-		echo -n "> $@"
+
+		if (($# == 0));then 
+			echo -n ">"
+		else
+			echo -n "Breakpoint > $@"
+		fi
+
 		read bufferTemporal 
-		
+
 	fi
 }
 
@@ -498,11 +522,21 @@ comprobarDatosFichero(){
 	for ((i=1;i<=numProc;i++)) do
 		for((j=1;j<=numCol;j++)) do
 			case "$j" in
-				1)comprobarRepite $i ;;
-				2)comprobarRango "El tiempo de llegada del proceso ${procesos[$i,1]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 0 999999 ;;
-				3)comprobarRango "El tiempo de ejecución del proceso ${procesos[$i,1]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 1 999999 ;;
-				4)comprobarRango "La prioridad del proceso ${procesos[$i,1]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] $priorMin $priorMax ;;
-				5)comprobarRango "El tamaño del proceso ${procesos[$i,1]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 1 $tamPart ;;
+				1)
+					comprobarRepite $i 
+				;;
+				2)
+					comprobarRango "El tiempo de llegada del proceso ${procesos[$i,1]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 0 999999 
+				;;
+				3)
+					comprobarRango "El tiempo de ejecución del proceso ${procesos[$i,1]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 1 999999 
+				;;
+				4)
+					comprobarRango "La prioridad del proceso ${procesos[$i,1]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] $priorMin $priorMax 
+				;;
+				5)
+					comprobarRango "El tamaño del proceso ${procesos[$i,1]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 1 $tamPart 
+				;;
 			esac
 		done
 	done
@@ -755,8 +789,10 @@ setCPU(){
 	local -i menorPrioridad
 	menorPrioridad=$procesoCPU
 	for((i=1;i<=numPart;i++)) do
+		breakpoint "Entrando al if chungo \n tipo prioridad: $tipoPrioridad"
 		if [ ${procesos[${memoria[$i]},4]} $tipoPrioridad ${procesos[$menorPrioridad,4]} ]; then
-			menorPrioridad=${memoria[$i]}
+			breakpoint
+			zmenorPrioridad=${memoria[$i]}
 			partCPU=$i #particion que esta en la cpu
 		#si tienen la misma prioridad, se compara los indices de los procesos de la tabla.
 		#Como esta ordenado se coge el de menor T.Llegada y si son iguales se coge el primero que se haya escrito
@@ -794,7 +830,7 @@ ejecucion(){
 	#Empieza la ejecucion del programa
 	while [ $procEjecutados -lt $numProc ]; do # mientras el numero de procesos ejecutados sea menor a procesos total
 		clear
-		breakpoint "Entrando en el bucle de"
+		
 		#en que tiempo de ejecucion se encuentra
 		echo -e "${L_CYAN}Tiempo de ejecución:${NC}${B_GREEN} $tiempoEjec${NC}\n\n${BOLD}Log:${NC}"
 		echo -e "________________________________________________________________________________________________\nTiempo de ejecución: $tiempoEjec\n" > temp
@@ -915,7 +951,7 @@ ejecucion(){
 		fi
 
 	done
-	breakpoint "Entrado a la impresión"
+
 	rm temp
 	clear
 	imprimirTabla 1 2 3 4 7 8
