@@ -31,6 +31,8 @@ echo -e "\e[0;36m		║\e[0m										\e[0;36m║\e[0m"
 echo -e "\e[0;36m		╚═══════════════════════════════════════════════════════════════════════════════╝\e[0m\n"
 echo "" >>informePrioridadMenor.txt
 
+echo `tput sitm`Me gusta hacer poles`tput sgr0`
+
 echo "	╔═══════════════════════════════════════════════════════════════════════════════╗" >> informePrioridadMenor.txt
 echo "	║										║" >> informePrioridadMenor.txt
 echo "	║				Informe de Práctica				║" >> informePrioridadMenor.txt
@@ -45,6 +47,8 @@ echo "" >>informePrioridadMenor.txt
 
 #declaracion de variables
 
+
+
 declare opcionApropiativo
 declare opcionEstatico
 declare -A procesos
@@ -57,12 +61,40 @@ declare -i procesoCPU=0
 declare -i partCPU=0
 declare priorMin
 declare priorMax
-declare numPart
+declare numeroParticiones
 declare tamPart
 declare tamCola=0
 declare tipoPrioridad
 declare abrirInforme
 
+#Según Necesidades (2020):
+declare tamMemoria=15
+declare memoriaLibre
+
+#FIXME borrame loko
+memoriaLibre=$tamMemoria
+
+
+
+
+# Memoria según necesidades es el array bidimensional en el que se almacenará la información de la memoria
+# No tengo intención de hacer un algoritmo eficiente para la memoria, por el simple hecho de 
+# que puede ser poco intuitivo para alumnos de primero
+#
+# Más adelante se explicará como estarán organizadas estas capas de memoria, y el contenido específico que almacenará cada capa
+declare -A memoriaSegunNecesidades
+#La memoria será un array bidimensional con N capas y M huecos, siendo M = tamMemoria
+#Así podremos almacenar que proceso se almacena en cada hueco.
+
+#Capa donde se guardaran los índices/Apuntadores/punteros de el proceso que se encuentra en cada posición de memoria respecto a la tabla de $procesos[]
+declare -r MEM_INDICE=0	
+
+#Capa donde se almacena el texto a imprimir
+declare -r MEM_TOSTRING=1
+
+declare -r MEM_HUECO_VACIO="null"
+declare -r MEM_STRING_HUECO_VACIO="-"
+declare -r MEM_STRING_HUECOSINCOLOR=" "
 #Colores de texto
 #ejemplo: echo -e "${B_RED}texto en rojo negrita${GREEN}texto en verde${NC}"
 declare -r DEFAULT='\e[39m' #Color por defecto
@@ -134,8 +166,11 @@ declare -r P_PID=0
 declare -r P_COLOR=10
 
 
-
-
+#Strings de estados/STATUS (Valores a asignar a P_ESTADO)
+declare -r STAT_MEMO="Memo."
+declare -r STAT_ENCPU="En CPU"
+declare -r STAT_COLA="Cola"
+declare -r STAT_FIN="Fin"
 
 
 
@@ -213,9 +248,16 @@ forzarCierre(){
 	imprimirErrorCritico "Cerrando por fallo, pulse [Enter] para continuar"
 	read buffer
 
-	deleteGeneratedFiles
+	#Funciones a ejecutar aquí abajo: {
+
+		deleteGeneratedFiles
+
+
+
+	#	}
+
 	clear
-	exit 0
+	fin_programa
 }
 
 
@@ -410,7 +452,7 @@ cargaDatos(){
 		clear
 		imprimirLCyan "Has elegido Apropiativo: $opcionApropiativo y Estatico: $opcionEstatico"
 		scanfNum "¿Tamaño de la particion?: " tamPart 1
-		scanfNum "¿Número de particiones? " numPart 1
+		scanfNum "¿Número de particiones? " numeroParticiones 1
 		scanfNumMinMax "¿Prioridad mínima?" priorMin -10000 10000 
 		scanfNumMinMax "¿Prioridad máxima?" priorMax -10000 10000
 		establecerPrioridad 
@@ -507,7 +549,7 @@ breakpoint(){
 		if (($# == 0));then 
 			echo -n ">"
 		else
-			echo -n "Breakpoint > $@"
+			echo -n "Breakpoint > $1"
 		fi
 
 		read bufferTemporal 
@@ -558,13 +600,13 @@ debug(){
 # Descripción: Borra aquellos archivos que han sido generados por el programa. Es necesario indicar los archivos a borrar
 # Uso: Añadir los archvios, pereferiblemente, comprobar antes de borrar si existen
 deleteGeneratedFiles(){
-if [[ -f $DEFAULT_DEBUG_OUTPUT_FILE_NAME ]]; then
-	rm $DEFAULT_DEBUG_OUTPUT_FILE_NAME >> /dev/null
-fi
+	if [[ -f $DEFAULT_DEBUG_OUTPUT_FILE_NAME ]]; then
+		rm $DEFAULT_DEBUG_OUTPUT_FILE_NAME >> /dev/null
+	fi
 
-if [[ -f $DEFAULT_LOG_FILE_NAME ]]; then
-	rm $DEFAULT_LOG_FILE_NAME >> /dev/null
-fi
+	if [[ -f $DEFAULT_LOG_FILE_NAME ]]; then
+		rm $DEFAULT_LOG_FILE_NAME >> /dev/null
+	fi
 #TOFILL
 }
 
@@ -637,7 +679,7 @@ datosFichero(){
 		numLineas=`cat $nomFile | wc -l`
 		#sed -n 1p coge la linea 1 y cut -d ":" -f 2 la columna 2 delimitado por :
 		tamPart=`sed -n 1p $nomFile | cut -d ":" -f 2`
-		numPart=`sed -n 2p $nomFile | cut -d ":" -f 2`
+		numeroParticiones=`sed -n 2p $nomFile | cut -d ":" -f 2`
 		opcionApropiativo=`sed -n 3p $nomFile | cut -d ":" -f 2`
 		opcionEstatico=`sed -n 4p $nomFile | cut -d ":" -f 2`
 		priorMin=`sed -n 5p $nomFile | cut -d ":" -f 2`
@@ -667,7 +709,7 @@ comprobarDatosFichero(){
 	#TODO: Eliminar número de particiones.
 	
 	comprobarRango "El tamaño de particiones es incorrecto, tendrás que introducir por teclado otro número: " $tamPart tamPart 1 999999
-	comprobarRango "El número de particiones es incorrecto, tendrás que introducir por teclado otro número: " $numPart numPart 1 999999
+	comprobarRango "El número de particiones es incorrecto, tendrás que introducir por teclado otro número: " $numeroParticiones numeroParticiones 1 999999
 	comprobarSN "Opcion apropiativo incorrecto, tendrás que introducir por teclado [s/n]:" $opcionApropiativo opcionApropiativo
 	for ((i=1;i<=numProc;i++)) do
 		for((j=1;j<=numCol;j++)) do
@@ -699,13 +741,13 @@ datosAleatorios(){
 	local -i i
 	numAleatorio tamPart 1 100 #aleatorio de tamaño de partición
 	tamPart=$[$tamPart * 10] #multiplicamos por 10 para que acabe en 0 el tamaño particion, es meramente estetico
-	numAleatorio numPart 1 7 
+	numAleatorio numeroParticiones 1 7 
 	numAleatorio numProc 5 12
 	numAleatorio priorMin -30 30
 	numAleatorio priorMax -30 30
 	establecerPrioridad
 	for ((i=1; i<=numProc; i++)) do 
-		procesos[$i,P_NOMBRE]="P$i"
+		procesos[$i,$P_NOMBRE]="P$i"
 		numAleatorio procesos[$i,$P_TLLEGADA] 0 15 #numero aleatorio de t.llegada entre 0 y 15
 		numAleatorio procesos[$i,$P_TEJECUCION] 1 10 #numero aleatorio de t.ejec entre 0 y 10		
 		numAleatorio procesos[$i,$P_PRIORIDAD] $priorMin $priorMax #numero aleatorio de prioridad entre prioriMin y priorMax
@@ -719,7 +761,7 @@ escribeDatos(){
 	local -i i
 	local -i j
 	echo "Tamaño particiones:$tamPart" > datos.txt
-	echo "Numero de particiones:$numPart" >> datos.txt
+	echo "Numero de particiones:$numeroParticiones" >> datos.txt
 	echo "Apropiativo:$opcionApropiativo" >> datos.txt
 	echo "Estatico:$opcionEstatico" >> datos.txt
 	echo "Prioridad Mínima:$priorMin" >> datos.txt
@@ -836,7 +878,7 @@ informeTabla(){
 # Descripción: inicializa arrays necesario antes de la ejecución
 inicializarArrays(){
 	local -i i
-	for((i=1;i<=numPart;i++)) do #ponemos el indice a 0 las particiones
+	for((i=1;i<=numeroParticiones;i++)) do #ponemos el indice a 0 las particiones
 		memoria[$i]=0
 	done
     cola[1]=0
@@ -861,7 +903,8 @@ inicializarArrays(){
 anadirCola(){
 	((tamCola++))
     cola[$tamCola]=$1
-	procesos[$1,$P_ESTADO]="Cola"
+	#Actualizamos el estado del proceso a "En cola"
+	procesos[$1,$P_ESTADO]=$STAT_COLA
 }
 
 # Nombre: eliminarCola
@@ -882,12 +925,12 @@ eliminarCola(){
 anadirMemoria(){
 	local -i i
 	local -i bool=0
-	for((i=1;i<=numPart&&bool==0;i++)) do
+	for((i=1;i<=numeroParticiones&&bool==0;i++)) do
 		if [ ${memoria[$i]} -eq 0 ]; then #comprueba si la particion está vacia
 			memoria[$i]=$1
 			eval ${2}=$i
 			bool=1
-			procesos[${cola[1]},9]="Memo."
+			procesos[${cola[1]},$P_ESTADO]=$STAT_MEMO
 		fi
 	done
 }
@@ -899,7 +942,7 @@ imprimirParticion(){
 	local -i j
 	local -i k
 	local -i aux
-	for ((i=1;i<=numPart;i++)) do
+	for ((i=1;i<=numeroParticiones;i++)) do
 		aux=$[${procesos[${memoria[$i]},5]} * 100 / $tamPart] # regla de 3 calcula el numero de espacios necesarios para el proceso
 		echo -e " ____________________________________________________________________________________________________"
         echo -e -n "|$_RED" # fondo de color rojo para lo que ocupa el proceso
@@ -912,7 +955,7 @@ imprimirParticion(){
 		done
 		echo -e "${NC}|${B_BLUE} Particion $i${NC}"
 		if [ ${memoria[$i]} -ne 0 ]; then # si no esta vacio la particion muestra los datos del proceso en la particion	
-			echo -e "${B_RED} ${procesos[${memoria[$i]},1]} [Prior. ${procesos[${memoria[$i]},4]}]: ${procesos[${memoria[$i]},5]}M/${tamPart}M ($aux%)${NC}"
+			echo -e "${B_RED} ${procesos[${memoria[$i]},1]} [Prior. ${procesos[${memoria[$i]},$P_PRIORIDAD]}]: ${procesos[${memoria[$i]},5]}M/${tamPart}M ($aux%)${NC}"
 		fi
 	done
 }
@@ -922,15 +965,16 @@ imprimirParticion(){
 escribirParticion(){
 	local -i i
 	local -i porcentaje
-	for ((i=1;i<=numPart;i++)) do
+	for ((i=1;i<=numeroParticiones;i++)) do
 		if [ ${memoria[$i]} -ne 0 ]; then
 			porcentaje=$[${procesos[${memoria[$i]},5]} * 100 / ${tamPart}]
-			echo "Partición $i: ${procesos[${memoria[$i]},1]} [Prior. ${procesos[${memoria[$i]},4]}]: ${procesos[${memoria[$i]},5]}M/${tamPart}M ($porcentaje%)" >> temp
+			echo "Partición $i: ${procesos[${memoria[$i]},1]} [Prior. ${procesos[${memoria[$i]},$P_PRIORIDAD]}]: ${procesos[${memoria[$i]},5]}M/${tamPart}M ($porcentaje%)" >> temp
 		else
 			echo "Partición $i: Libre" >> temp
 		fi
 	done
 }
+
 
 # Nombre: setCPU
 # Descripcion: introduce un proceso en CPU si esta libre o hay otro proceso con menor prioridad
@@ -939,34 +983,134 @@ escribirParticion(){
 setCPU(){
 	local -i menorPrioridad
 	menorPrioridad=$procesoCPU
-	for((i=1;i<=numPart;i++)) do
-		breakpoint "Entrando al if chungo \n tipo prioridad: $tipoPrioridad"
-		if [ ${procesos[${memoria[$i]},4]} $tipoPrioridad ${procesos[$menorPrioridad,4]} ]; then
-			breakpoint
+	for((i=1;i<=numeroParticiones;i++)) do
+		
+		#FIXME	Esta zona está rota por el linter: No detecta que la variable $tipoPrioridad es un comparador
+		
+		#
+		if [ ${procesos[${memoria[$i]},$P_PRIORIDAD]} -gt ${procesos[$menorPrioridad,$P_PRIORIDAD]} ]; then
+			
 			zmenorPrioridad=${memoria[$i]}
 			partCPU=$i #particion que esta en la cpu
 		#si tienen la misma prioridad, se compara los indices de los procesos de la tabla.
 		#Como esta ordenado se coge el de menor T.Llegada y si son iguales se coge el primero que se haya escrito
-		elif [ ${procesos[${memoria[$i]},4]} -eq ${procesos[$menorPrioridad,4]} -a ${memoria[$i]} -lt $menorPrioridad ]; then
+		elif [ ${procesos[${memoria[$i]},$P_PRIORIDAD]} -eq ${procesos[$menorPrioridad,$P_PRIORIDAD]} -a ${memoria[$i]} -lt $menorPrioridad ]; then
 			menorPrioridad=${memoria[$i]}
 			partCPU=$i
 		fi
 	done
 	if [ $procesoCPU -ne $menorPrioridad ]; then
-		procesos[$procesoCPU,9]="Memo."
+		procesos[$procesoCPU,$P_ESTADO]=$STAT_MEMO
 		procesoCPU=$menorPrioridad
-		procesos[$procesoCPU,9]="En CPU"
+		procesos[$procesoCPU,$P_ESTADO]=$STAT_ENCPU
 		eval ${1}=1 #modifica el boolean que se ha pasado por 1, cuando haya una modificacion en el CPU
 	else
 		eval ${1}=0
 	fi
 }
+#
 
+vaciarMemoria(){
+	for((i=1;i<=tamMemoria;i++)); do
+		memoriaSegunNecesidades[i,$MEM_INDICE]=$MEM_HUECO_VACIO
+		memoriaSegunNecesidades[i,$MEM_TOSTRING]=$MEM_STRING_HUECO_VACIO
+	done
+
+}
+
+# Si el proceso tiene un tamaño igual o menor a la memoria libre:
+#  -Se introduce el proceso en memoria
+#  -Se actualiza su estado a "STAT_MEMO"
+#  -Se actualiza la cantidad de memoria libre
+# @param $1: indice del proceso a guardar en la particion
+aniadirAMemoria(){
+	#TODO: inicializar $memoriaLibre en algun lado con el tamaño total de memoria
+	#Dicho tamaño de momento va a ser fijo
+	debug "Testeando el valor de $memoriaLibre"
+	if ((proceso[$1,P_TAMANIO] <= memoriaLibre)); then
+		proceso[$1,$P_ESTADO]=$STAT_MEMO
+		ajustarMemoriaParaElProceso ${proceso[$1,$P_TAMANIO]}
+	fi
+}
+
+#
+# Funcion que comprueba si un proces cabe en la memoria TOTAL, o es necesario reubicar.
+# @param $1: Tamaño del proceso
+ajustarMemoriaParaElProceso(){
+	local cabeEnMemoria=0
+	local numeroDeHuecosLibresConsecutivos=0
+
+	if ((proceso[$1,P_TAMANIO] <= memoriaLibre)); then
+		#Contamos el número de posiciones vacias consecutivas
+		#Si tienen el mismo tamaño que la memoria, lo enganchamos ahí
+		#si hemos recorrido todo el array, y no cabe en ningun lado, reubicamos.
+
+		for((i=1;i<=tamMemoria;i++)); do
+			if [[ ${memoriaSegunNecesidades[i,$MEM_INDICE]} -eq $MEM_HUECO_VACIO ]]; then #Si hueco esta vacio
+				((numeroDeHuecosLibresConsecutivos++))
+
+				if ((numeroDeHuecosLibresConsecutivos = $1)); then #Si el proceso tiene el tamaño mínimo del hueco comprobado
+					cabeEnMemoria=1
+					break
+				fi
+			else
+				numeroDeHuecosLibresConsecutivos=0
+			fi
+		done
+	fi
+
+	#FIXME no se si funciona
+	if (( cabeEnMemoria == 0)); then
+		reubicarProcesos
+	fi
+}
+
+
+reubicarProcesos(){
+	# Buffer destinado a guardar los elementos que se encuentran en este momento en memoria
+	# Almacenará: Un puntero a la fila de la tabla correspondiente a cada proceso
+	# Leerá dicho puntero/indice de la tabla de memoria, de la capa MEM_INDICE
+
+	local ultimoIndiceEncontrado="/"
+	local -i ultimaPosicionMemoria=1
+	#FIXME esto igual no tira: EL unset igual no es correcto
+	
+	#Vaciamos el array
+	unset bufferReubicacion
+	declare -a bufferReubicacion
+
+	#Almacenamos los procesos que están en memoria
+	for((i=1;i<=tamMemoria;i++)); do
+		if [[ ${memoriaSegunNecesidades[i,$MEM_INDICE]} != "$ultimoIndiceEncontrado" ]] && [[ ${memoriaSegunNecesidades[i,$MEM_INDICE]} != "$MEM_HUECO_VACIO" ]]; then
+			bufferReubicacion+=("${memoriaSegunNecesidades[i,$MEM_INDICE]}")
+		fi
+	done
+	
+	
+	for indice in "{bufferReubicacion[@]}"; do
+		
+		for((i=0;i<procesos[$indice,$P_TAMANIO];i++)); do
+			#añadimos el indice
+			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_INDICE]=$indice
+			#Añadimos la salida por pantalla con COLOR
+			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]=${P_COLOR}$MEM_STRING_HUECO_VACIO${NC}
+			
+
+			if (( ultimaPosicionMemoria > tamMemoria)); then 
+				breakpoint "Colega, tenemos un problemón en reubicarProcesos(), te has salido del array de memoria"
+			fi
+			(ultimaPosicionMemoria++)
+		done
+		
+	done
+	
+}
 
 ejecucion(){
 	local -i procEjecutados=0
 	local -i tiempoEjec=0
-	local -i partLibres=$numPart
+
+	local -i partLibres=$numeroParticiones
 	local -i procesoCPUAnterior
 	local  tEjecMedio=0
 	local  tEsperaMedio=0
@@ -979,128 +1123,40 @@ ejecucion(){
 	local -i cambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
 	local -i bool #booleano para comprobar si se ha echado un proceso (apropiativo)
 	#Empieza la ejecucion del programa
+
+	#TODO: Inicializar el array de memoria
+	#
+
 	while [ $procEjecutados -lt $numProc ]; do # mientras el numero de procesos ejecutados sea menor a procesos total
 		clear
-		
-		#en que tiempo de ejecucion se encuentra
-		echo -e "${L_CYAN}Tiempo de ejecución:${NC}${B_GREEN} $tiempoEjec${NC}\n\n${BOLD}Log:${NC}"
-		echo -e "________________________________________________________________________________________________\nTiempo de ejecución: $tiempoEjec\n" > temp
-		cambio=0
-		#comprueba si el tiempo de ejecución restante del proceso en CPU ha terminado
-		if [ ${procesos[$procesoCPU,$P_TRESTANTE]} = 0 ]; then 
-			echo -e "\t${B_RED}${procesos[$procesoCPU,1]} [Prior. ${procesos[$procesoCPU,4]}]${NC}${L_CYAN} termina su ejecución y ${NC}${B_BLUE} Partición $partCPU${NC}${L_CYAN} liberada${NC}"
-			echo -e "${procesos[$procesoCPU,1]} [Prior. ${procesos[$procesoCPU,4]}] termina su ejecución y Partición $partCPU liberada" >> temp
-			procesos[$procesoCPU,$P_TRETORNO]=$tiempoEjec #asigna el tiempo de ejecucion actual al tiempo de retorno
-			procesos[$procesoCPU,$P_ESTADO]="Fin"
-			((procEjecutados++))
 
-			tEjecAcumulado=$[$tEjecAcumulado + ${procesos[$procesoCPU,$P_TEJECUCION]}]
-			tEsperaAcumulado=$[$tEsperaAcumulado + ${procesos[$procesoCPU,$P_TESPER]}]
-			tRetornoAcumulado=$[$tRetornoAcumulado + ${procesos[$procesoCPU,$P_TRETORNO]}]
+		echo "Tiempo de ejecución: $tiempoEjec"
 
-			tEjecMedio=`echo "scale=2;$tEjecAcumulado/$procEjecutados" | bc -l`
-			tEsperaMedio=`echo "scale=2;$tEsperaAcumulado/$procEjecutados" | bc -l`
-			tRetornoMedio=`echo "scale=2;$tRetornoAcumulado/$procEjecutados" | bc -l`
-			
-			procesoCPU=0
-			((partLibres++))
-			memoria[$partCPU]=0
-			cambio=1
-			#si es prioridad dinamica, disminuye/aumenta la prioridad de los procesos en memoria
-			if [ $opcionEstatico = n ]; then 
-				for((i=1;i<=numPart;i++)) do
-					if [ ${memoria[$i]} -gt 0 ]; then
-						if [ $tipoPrioridad = "-lt" -a ${procesos[${memoria[$i]},4]} -gt $priorMin ]; then
-							((procesos[${memoria[$i]},4]--))
-						elif [ $tipoPrioridad = "-gt" -a ${procesos[${memoria[$i]},4]} -lt $priorMin ]; then
-							((procesos[${memoria[$i]},4]++))
-						fi
-					fi
-				done
-				if [ $partLibres -lt $numPart -a $tipoPrioridad = "-lt" ];then #si hay procesos en memoria
-						echo -e "\t${B_L_YELLOW}(Dinámico)${NC}${L_CYAN} Los procesos en memoria han disminuido su prioridad en 1${NC}"
-						echo -e  "(Dinámico) Los procesos en memoria han disminuido su prioridad en 1" >> temp
-				elif [ $partLibres -lt $numPart -a $tipoPrioridad = "-gt" ];then
-						echo -e "\t${B_L_YELLOW}(Dinámico)${NC}${L_CYAN} Los procesos en memoria han aumentado su prioridad en 1${NC}"
-						echo -e  "(Dinámico) Los procesos en memoria han aumentado su prioridad en 1" >> temp
-				fi
-			fi
-		fi 
-		#añade en cola los procesos llegan en el tiempo de ejecución actual
+		#Introducimos a la cola los procesos que han llegado a memoria
 		for((i=1;i<=numProc;i++)) do
-			if [ ${procesos[$i,2]} = $tiempoEjec ]; then
+			if [ "${procesos[$i,2]}" = $tiempoEjec ]; then
 				anadirCola $i
 			fi
-		done
-		
+		done		
 
-		#añade a la memoria los procesos de la cola
-		while [ $partLibres -gt 0 -a $tamCola -gt 0 ]; do 
-			anadirMemoria ${cola[1]} aux
-			echo -e "\t${B_RED}${procesos[${cola[1]},1]} [Prior. ${procesos[${cola[1]},4]}]${NC}${L_CYAN} entra en${NC}${B_BLUE} Partición $aux${NC}"
-			echo -e  "${procesos[${cola[1]},1]} [Prior. ${procesos[${cola[1]},4]}] entra en Partición $aux" >> temp
-			cambio=1
-			eliminarCola
-			((partLibres--))
-		done
-		#si la CPU esta vacia y hay procesos en memoria
-		if [ $procesoCPU -eq 0 -a $partLibres -lt $numPart ]; then #compruba si la CPU esta vacia y el numero de part libres es menor que el numero de part
-			setCPU cambio #añade un proceso a la CPU
-			echo -e "\t${B_RED}${procesos[$procesoCPU,1]} [Prior. ${procesos[$procesoCPU,4]}]${NC}${L_CYAN} entra en ejecución${NC}"
-			echo -e  "${procesos[$procesoCPU,1]} [Prior. ${procesos[$procesoCPU,4]}] entra en ejecución" >> temp
-			cambio=1
-		elif [ $opcionApropiativo = s ]; then #si el argoritomo es apropiativo 
-			bool=0
-			procesoCPUAnterior=$procesoCPU
-			setCPU bool
-			if [ $bool = 1 ]; then #comprueba si le ha echado
-				echo -e "\t${B_L_YELLOW}(Apropiativo) ${NC}${B_RED}${procesos[$procesoCPUAnterior,1]} [Prior. ${procesos[$procesoCPUAnterior,4]}]${NC}${L_CYAN} sale de la CPU y entra${NC} ${B_RED}${procesos[$procesoCPU,1]} [Prior. ${procesos[$procesoCPU,4]}]${NC}"
-				echo -e  "(Apropiativo) ${procesos[$procesoCPUAnterior,1]} [Prior. ${procesos[$procesoCPUAnterior,4]}] sale de la CPU y entra ${procesos[$procesoCPU,1]} [Prior. ${procesos[$procesoCPU,4]}]" >> temp
-				cambio=1
-			fi
-		fi
+		#comprobamos si alguno de los procesos que estan en memoria, han terminado
+			#Si han terminado
+			#Los sacamos
+		#si no han terminado
+		#continuamos
 
-		((tiempoEjec++)) 
-		((procesos[$procesoCPU,6]--))
-		#aumenta el tiempo de espera de los procesoso en memoria
-		for((i=1;i<=numPart;i++)) do
-			if [ ${memoria[$i]} -ne $procesoCPU ]; then
-				((procesos[${memoria[$i]},7]++))
-			fi
-		done
-		#aumenta el tiempo de espera de los procesoso en cola
-		for((i=1;i<=tamCola;i++)) do
-			((procesos[${cola[$i]},7]++))
-		done
 
-		imprimirParticion
-		echo "" >> temp
-		escribirParticion
-		#si hay un proceso en CPU
-		if [ $procesoCPU -gt 0 ]; then
-			echo -e "\t${L_CYAN}\nEjecutando en CPU:${NC} ${B_RED}${procesos[$procesoCPU,1]} [Prior. ${procesos[$procesoCPU,4]}]${NC}${L_CYAN} tiempo restante${NC} ${B_RED}${procesos[$procesoCPU,6]}${NC}"
-			echo -e "\nEjecutando en CPU: ${procesos[$procesoCPU,1]} [Prior. ${procesos[$procesoCPU,4]}] tiempo restante ${procesos[$procesoCPU,6]}" >> temp
-		else
-			imprimirLCyan "\nNo hay ningún proceso ejecutandose en CPU"
-			echo -e "\nNo hay ningún proceso ejecutandose en CPU" >> temp
-		fi
-		
-		imprimirLCyan "Tiempo de ejecución medio (proc. ejec): ${BOLD}$tEjecMedio" -n
-		echo -n "Tiempo de ejecución medio (proc. ejec): $tEjecMedio" >> temp
-		imprimirLCyan "	|  Tiempo de espera medio (proc. ejec): ${BOLD}$tEsperaMedio"
-		echo " | Tiempo de espera medio (proc. ejec): $tEsperaMedio" >> temp
-		#para el programa si ha habido un evento
-		if [ $cambio = 1 ];then
-			cat temp >> informePrioridadMenor.txt
-			imprimirTabla 1 2 3 6 4 7 9
-			informeTabla 1 2 3 6 4 7 9
-			imprimirLCyan "\nPulsa enter para continuar" -n
-			read -n 1000000 -t 0.01 #limpia buffer de teclado
-			read -s
-		else
-			imprimirLCyan "\nNo ha habido cambios ${NC}${RED}(no es necesario pulsar enter)"
-			sleep 0.5
-		fi
+		#Si uno de los procesos con tLlegada == tEjecución
+		#Y el proceso siguiente en la cola cabe
+		#Ejecutamos la introduccion de un proceso en memoria
+
+			#Ejecución de un proceso en memoria
+			#Si hay un hueco los suficientemente grande como para introducir el proceso
+				#Lo introducimos
+			#si no hay
+				#reubicamos
+
+
 
 	done
 
@@ -1132,14 +1188,13 @@ inicializarArrays
 clear
 imprimirTabla 1 2 3 4 5
 informeTabla 1 2 3 4 5
-breakpoint impresionTablaWapa
-imprimirTabla 10
+
 
 echo -e "
 ╔═══════════════════════════════════════╗
 ║					║
 ║${L_GREEN} Tamaño Partición: ${NC}${B_BLUE}$tamPart${NC}			║
-║${L_GREEN} Número de Particiones: ${NC}${B_BLUE}$numPart${NC}		║
+║${L_GREEN} Número de Particiones: ${NC}${B_BLUE}$numeroParticiones${NC}		║
 ║${L_GREEN} Número de Procesos: ${NC}${B_BLUE}$numProc ${NC}		║
 ║${L_GREEN} Prioridad Mínima: ${NC}${B_BLUE}$priorMin${NC}			║
 ║${L_GREEN} Prioridad Máxima: ${NC}${B_BLUE}$priorMax${NC}			║
@@ -1151,7 +1206,7 @@ escribirInforme "
 ╔═══════════════════════════════════════╗
 ║					║
 ║ Tamaño Partición: $tamPart			║
-║ Número de Particiones: $numPart		║
+║ Número de Particiones: $numeroParticiones		║
 ║ Número de Procesos: $numProc 		║
 ║ Prioridad Mínima: $priorMin			║
 ║ Prioridad Máxima: $priorMax			║
@@ -1164,6 +1219,7 @@ read -s
 ejecucion
 
 scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
-if [ $abrirInforme = "s" ]; then
+if [ "$abrirInforme" = "s" ]; then
 	more informePrioridadMenor.txt
 fi
+
