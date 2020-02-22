@@ -1031,6 +1031,7 @@ aniadirAMemoria(){
 		proceso[$1,$P_ESTADO]=$STAT_MEMO
 		ajustarMemoriaParaElProceso ${proceso[$1,$P_TAMANIO]}
 	fi
+	#TODO continuar
 }
 
 #
@@ -1086,7 +1087,8 @@ reubicarProcesos(){
 		fi
 	done
 	
-	
+	vaciarMemoria
+
 	for indice in "{bufferReubicacion[@]}"; do
 		
 		for((i=0;i<procesos[$indice,$P_TAMANIO];i++)); do
