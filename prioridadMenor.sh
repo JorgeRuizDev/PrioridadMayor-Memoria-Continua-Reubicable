@@ -1012,8 +1012,8 @@ setCPU(){
 
 vaciarMemoria(){
 	for((i=1;i<=tamMemoria;i++)); do
-		memoriaSegunNecesidades[i,$MEM_INDICE]=$MEM_HUECO_VACIO
-		memoriaSegunNecesidades[i,$MEM_TOSTRING]=$MEM_STRING_HUECO_VACIO
+		memoriaSegunNecesidades[$i,$MEM_INDICE]=$MEM_HUECO_VACIO
+		memoriaSegunNecesidades[$i,$MEM_TOSTRING]=$MEM_STRING_HUECO_VACIO
 	done
 
 }
@@ -1022,50 +1022,126 @@ vaciarMemoria(){
 #  -Se introduce el proceso en memoria
 #  -Se actualiza su estado a "STAT_MEMO"
 #  -Se actualiza la cantidad de memoria libre
+# Date: 22/02/2020
 # @param $1: indice del proceso a guardar en la particion
-aniadirAMemoria(){
+aniadirProcesoAMemoria(){
 	#TODO: inicializar $memoriaLibre en algun lado con el tamaño total de memoria
 	#Dicho tamaño de momento va a ser fijo
+	local -i posicionEnLaQueEmpiezaElHuecoEnMemoria
+
 	debug "Testeando el valor de $memoriaLibre"
 	if ((proceso[$1,P_TAMANIO] <= memoriaLibre)); then
 		proceso[$1,$P_ESTADO]=$STAT_MEMO
-		ajustarMemoriaParaElProceso ${proceso[$1,$P_TAMANIO]}
+
+		posicionEnLaQueEmpiezaElHuecoEnMemoria="$(ajustarMemoriaParaElProceso ${proceso[$1,$P_TAMANIO]})"
+
+		if [[ $posicionEnLaQueEmpiezaElHuecoEnMemoria == "null"  ]];then
+			breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), el return de ajustarMemoriaParaElProceso() no es posible || PROGRAMACIÓN DEFENSIVA"
+		fi
+
+		for((i=posicionEnLaQueEmpiezaElHuecoEnMemoria; i<${proceso[$1,$P_TAMANIO]}; i++)); do
+			#añadimos el indice
+			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_INDICE]=$
+			#Añadimos la salida por pantalla con COLOR
+			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]=${proceso[$1,${P_COLOR}]}$MEM_STRING_HUECO_VACIO${NC}
+
+			if [[ $i -gt $tamMemoria  ]];then
+				breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), has añadido a más memoria de la existente || PROGRAMACIÓN DEFENSIVA"
+			fi
+		done
+		
+
+
+		memoriaLibre=$($memoriaLibre - ${proceso[$1,$P_TAMANIO]})
 	fi
-	#TODO continuar
+	
+}
+
+
+# Si el proceso se encuentra en memoria
+#  -Se introduce el proceso en memoria
+#  -Se actualiza su estado a "STAT_MEMO"
+#  -Se actualiza la cantidad de memoria libre
+# Date: 22/02/2020
+# @param $1: indice del proceso a guardar en la particion
+eliminarProcesoDeMemoria(){
+
+	#FIXME estoy igual no rula
+	for((i=0;i<tamMemoria;i++)); do
+		if (( {proceso[$1,$P_ESTADO]} = memoriaSegunNecesidades[$i,$MEM_INDICE] ));then
+			memoriaSegunNecesidades[$i,$MEM_INDICE]=$MEM_HUECO_VACIO
+			memoriaSegunNecesidades[$i,$MEM_TOSTRING]=$MEM_STRING_HUECO_VACIO
+		fi
+	done
+	
+
 }
 
 #
 # Funcion que comprueba si un proces cabe en la memoria TOTAL, o es necesario reubicar.
+# Si es necesario, reubica la memoria.
+# Date: 22/02/2020
 # @param $1: Tamaño del proceso
+# @return posición en la que empieza el huevo ó null si no hay suficiente hueco.
+# 	return por stdout, es necesario = la llamada de la función a una variable para "capturar" el return.
 ajustarMemoriaParaElProceso(){
-	local cabeEnMemoria=0
-	local numeroDeHuecosLibresConsecutivos=0
+	local posicionEnLaQueEmpiezaElHuecoEnMemoria	
 
-	if ((proceso[$1,P_TAMANIO] <= memoriaLibre)); then
+	posicionEnLaQueEmpiezaElHuecoEnMemoria="$(encontrarHuecoEnMemoria $1)"
+
+	#FIXME no se si funciona
+	if (( posicionEnLaQueEmpiezaElHuecoEnMemoria == "null")); then
+		reubicarProcesos
+		posicionEnLaQueEmpiezaElHuecoEnMemoria="$(encontrarHuecoEnMemoria $1)"
+	fi
+
+	echo "$posicionEnLaQueEmpiezaElHuecoEnMemoria"
+
+}
+
+# Nombre: encontrarHuecoEnMemoria
+# Descripción: Función que calcula la posición / si es posible introducir $1 unidades de memoria continuas en memoria. 
+# Date 22/02/2020
+# @param1 tamaño del hueco a encontrar / tamaño del proceso a emplazar
+# @return posición en la que empieza el huevo ó null si no hay suficiente hueco.
+# 	return por stdout, es necesario = la llamada de la función a una variable para "capturar" el return.
+encontrarHuecoEnMemoria(){
+	local -i numeroDeHuecosLibresConsecutivos=0
+	local -i cabeEnMemoria=0 #boolean
+	local -i posicionInicialEnLaQueEmpiezaElHueco=1
+	local -i sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco=1
+
+	if ((proceso["$1",P_TAMANIO] <= memoriaLibre)); then
 		#Contamos el número de posiciones vacias consecutivas
-		#Si tienen el mismo tamaño que la memoria, lo enganchamos ahí
+		#Si tienen el mismo tamaño que la memoria, metemos el proceso en ese hueco.
 		#si hemos recorrido todo el array, y no cabe en ningun lado, reubicamos.
 
 		for((i=1;i<=tamMemoria;i++)); do
-			if [[ ${memoriaSegunNecesidades[i,$MEM_INDICE]} -eq $MEM_HUECO_VACIO ]]; then #Si hueco esta vacio
+			if [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} -eq $MEM_HUECO_VACIO ]]; then #Si hueco esta vacio
 				((numeroDeHuecosLibresConsecutivos++))
 
-				if ((numeroDeHuecosLibresConsecutivos = $1)); then #Si el proceso tiene el tamaño mínimo del hueco comprobado
+				if ((sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco = 1)); then
+					posicionInicialEnLaQueEmpiezaElHueco=$i
+					sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco=0
+				fi
+				
+				if ((numeroDeHuecosLibresConsecutivos = "$1")); then #Si el proceso tiene el tamaño mínimo del hueco comprobado
 					cabeEnMemoria=1
 					break
 				fi
 			else
 				numeroDeHuecosLibresConsecutivos=0
+				sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco=1
 			fi
 		done
 	fi
 
-	#FIXME no se si funciona
 	if (( cabeEnMemoria == 0)); then
-		reubicarProcesos
+		echo "null"
+	else
+		echo "$posicionInicialEnLaQueEmpiezaElHueco"
 	fi
 }
-
 
 reubicarProcesos(){
 	# Buffer destinado a guardar los elementos que se encuentran en este momento en memoria
@@ -1082,8 +1158,8 @@ reubicarProcesos(){
 
 	#Almacenamos los procesos que están en memoria
 	for((i=1;i<=tamMemoria;i++)); do
-		if [[ ${memoriaSegunNecesidades[i,$MEM_INDICE]} != "$ultimoIndiceEncontrado" ]] && [[ ${memoriaSegunNecesidades[i,$MEM_INDICE]} != "$MEM_HUECO_VACIO" ]]; then
-			bufferReubicacion+=("${memoriaSegunNecesidades[i,$MEM_INDICE]}")
+		if [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} != "$ultimoIndiceEncontrado" ]] && [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} != "$MEM_HUECO_VACIO" ]]; then
+			bufferReubicacion+=("${memoriaSegunNecesidades[$i,$MEM_INDICE]}")
 		fi
 	done
 	
@@ -1095,8 +1171,7 @@ reubicarProcesos(){
 			#añadimos el indice
 			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_INDICE]=$indice
 			#Añadimos la salida por pantalla con COLOR
-			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]=${P_COLOR}$MEM_STRING_HUECO_VACIO${NC}
-			
+			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]=${proceso[$indice,${P_COLOR}]}$MEM_STRING_HUECO_VACIO${NC}
 
 			if (( ultimaPosicionMemoria > tamMemoria)); then 
 				breakpoint "Colega, tenemos un problemón en reubicarProcesos(), te has salido del array de memoria"
@@ -1106,6 +1181,20 @@ reubicarProcesos(){
 		
 	done
 	
+}
+
+dibujarMemoria(){
+	#FIXME es muy cutre/temporal
+	echo "Tamaño memoria: $tamMemoria | Uso de memoria: $memoriaLibre"
+	echo "memoria:"
+
+	for((i=0;i<tamMemoria;i++)); do
+		echo "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
+	done
+	for((i=0;i<tamMemoria;i++)); do
+		echo "${memoriaSegunNecesidades[$i,$MEM_TOSTRING]}"
+	done
+
 }
 
 ejecucion(){
@@ -1158,7 +1247,7 @@ ejecucion(){
 			#si no hay
 				#reubicamos
 
-
+		dibujarMemoria
 
 	done
 
