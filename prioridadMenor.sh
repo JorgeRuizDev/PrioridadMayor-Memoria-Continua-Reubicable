@@ -54,7 +54,10 @@ declare opcionEstatico
 declare -A procesos
 declare -a memoria
 declare -a cabeceraProcesos=("PID" "NOMBRE PROCESO" "T.LLEGADA" "T.EJECUCIÓN" "PRIORIDAD" "MEMORIA" "T.EJEC.REST" "T.ESPERA" "T.RETORNO" "ESTADO ACTUAL")
+
+#Array con la cola | Empieza en 1, por lo que el valor 0 siempre se podrá saltar (nota alumno 2020: Lo arrays empiezan siempre en 0, pero paso de cambiarlo)
 declare -a cola
+
 declare -r numCol=5
 declare -i numProc=0
 declare -i procesoCPU=0
@@ -71,7 +74,7 @@ declare abrirInforme
 declare tamMemoria=15
 declare memoriaLibre
 
-#FIXME borrame loko
+#FIXME borrame loko | Edit más tarde: Igual no hay que borrarlo, este es un buen momento para instanciarlo, ahora o durante la ejecución. 
 memoriaLibre=$tamMemoria
 
 
@@ -94,7 +97,10 @@ declare -r MEM_TOSTRING=1
 
 declare -r MEM_HUECO_VACIO="null"
 declare -r MEM_STRING_HUECO_VACIO="-"
-declare -r MEM_STRING_HUECOSINCOLOR=" "
+declare -r MEM_STRING_HUECOSINCOLOR="X"
+
+
+
 #Colores de texto
 #ejemplo: echo -e "${B_RED}texto en rojo negrita${GREEN}texto en verde${NC}"
 declare -r DEFAULT='\e[39m' #Color por defecto
@@ -181,7 +187,7 @@ declare -r INFORME_FILENAME="informePrioridadMayor.txt"
 #DEBUG (Variables globales):
 declare -r DEFAULT_DEBUG_OUTPUT_FILE_NAME="debug.txt"
 declare -r DEBUG_ENABLE=true
-declare -r DEBUG_FIRST_EXECUTION=true
+declare    DEBUG_FIRST_EXECUTION=true
 declare -r DEBUG_PERSISTENT_FILE=false
 
 
@@ -244,9 +250,9 @@ salirPorErrorCritico(){
 # Date: 21/02/2020
 # //@see deleteGeneratedFiles
 forzarCierre(){
-	local buffer
+	
 	imprimirErrorCritico "Cerrando por fallo, pulse [Enter] para continuar"
-	read buffer
+	read -ers
 
 	#Funciones a ejecutar aquí abajo: {
 
@@ -311,12 +317,12 @@ scanfSiNo() {
 scanfNum(){
 	local opcionN
 	imprimirLCyan "$1" -n
-	read opcionN
+	read -r opcionN
     #$opcionN -eq $opcionN comprueba si es un numero, si es una letra da error enviado al vacio
 	until [ $opcionN -eq $opcionN -a $opcionN -ge  $3 ] 2>/dev/null; do
 		imprimirAviso "El valor '$opcionN' introducido no válido, tiene que ser mayor que $3."
 		imprimirLCyan "$1" -n	
-		read opcionN
+		read -r opcionN
 	done
 	eval ${2}=$opcionN
 }
@@ -338,11 +344,11 @@ scanfNumMinMax(){
 	fi
 
 	imprimirLCyan "$1" -n
-	read opcionN
+	read -r opcionN
 	until [ $opcionN -eq $opcionN -a $opcionN -le $numMaximo -a $opcionN -ge $numMinimo ] 2>/dev/null; do 
 		imprimirAviso "El valor '$opcionN' introducido no válido, intervalo válido [ $numMinimo, $numMaximo ]."
 		imprimirLCyan "$1" -n	
-		read opcionN
+		read -r opcionN
 	done
 	eval ${2}=$opcionN
 }
@@ -355,7 +361,7 @@ scanfString(){
 	local opcionNombre
 	local -i palabra
 	imprimirLCyan "$1" -n
-	read opcionNombre
+	read -r opcionNombre
 	palabra=`echo $opcionNombre | wc -w`
 	while [ $palabra -ne 1 ]; do #comprueba si está vacío o tiene un espacio
 		imprimirAviso "No puede ser vacío ni tener espacios."
@@ -552,7 +558,7 @@ breakpoint(){
 			echo -n "Breakpoint > $1"
 		fi
 
-		read bufferTemporal 
+		read -r bufferTemporal 
 
 	fi
 }
@@ -1015,7 +1021,6 @@ vaciarMemoria(){
 		memoriaSegunNecesidades[$i,$MEM_INDICE]=$MEM_HUECO_VACIO
 		memoriaSegunNecesidades[$i,$MEM_TOSTRING]=$MEM_STRING_HUECO_VACIO
 	done
-
 }
 
 # Si el proceso tiene un tamaño igual o menor a la memoria libre:
@@ -1029,9 +1034,11 @@ aniadirProcesoAMemoria(){
 	#Dicho tamaño de momento va a ser fijo
 	local -i posicionEnLaQueEmpiezaElHuecoEnMemoria
 
-	debug "Testeando el valor de $memoriaLibre"
+	debug "Testeando el valor de memoria libre $memoriaLibre"
 	if ((proceso[$1,P_TAMANIO] <= memoriaLibre)); then
 		proceso[$1,$P_ESTADO]=$STAT_MEMO
+
+		eliminarCola #sacamos al primer proceso de la cola
 
 		posicionEnLaQueEmpiezaElHuecoEnMemoria="$(ajustarMemoriaParaElProceso ${proceso[$1,$P_TAMANIO]})"
 
@@ -1041,9 +1048,10 @@ aniadirProcesoAMemoria(){
 
 		for((i=posicionEnLaQueEmpiezaElHuecoEnMemoria; i<${proceso[$1,$P_TAMANIO]}; i++)); do
 			#añadimos el indice
-			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_INDICE]=$
-			#Añadimos la salida por pantalla con COLOR
-			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]=${proceso[$1,${P_COLOR}]}$MEM_STRING_HUECO_VACIO${NC}
+			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_INDICE]=$1
+			#Añadimos la salida por pantalla con COLOR 
+			
+			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]=${proceso[$1,${P_COLOR}]}$MEM_STRING_HUECOSINCOLOR${NC}
 
 			if [[ $i -gt $tamMemoria  ]];then
 				breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), has añadido a más memoria de la existente || PROGRAMACIÓN DEFENSIVA"
@@ -1059,22 +1067,29 @@ aniadirProcesoAMemoria(){
 
 
 # Si el proceso se encuentra en memoria
-#  -Se introduce el proceso en memoria
+#  -Se elimina el proceso en memoria
 #  -Se actualiza su estado a "STAT_MEMO"
 #  -Se actualiza la cantidad de memoria libre
 # Date: 22/02/2020
-# @param $1: indice del proceso a guardar en la particion
+# @param $1: indice del proceso a borrar de memoria
 eliminarProcesoDeMemoria(){
 
+	local -i estabaEnMemoria=0
+
 	#FIXME estoy igual no rula
-	for((i=0;i<tamMemoria;i++)); do
-		if (( {proceso[$1,$P_ESTADO]} = memoriaSegunNecesidades[$i,$MEM_INDICE] ));then
+	for((i=1;i<=tamMemoria;i++)); do
+		#Si el proceso de una dirección coincide con el del índice pasado, borramos dicho proceso
+		if (( $1 = memoriaSegunNecesidades[$i,$MEM_INDICE] ));then
+			estabaEnMemoria=1
 			memoriaSegunNecesidades[$i,$MEM_INDICE]=$MEM_HUECO_VACIO
 			memoriaSegunNecesidades[$i,$MEM_TOSTRING]=$MEM_STRING_HUECO_VACIO
 		fi
 	done
-	
+	memoriaLibre=$($memoriaLibre + ${proceso[$1,$P_TAMANIO]})
 
+	if (( estabaEnMemoria = 1)); then
+		procesos[$1,$P_ESTADO]=$STAT_FIN
+	fi
 }
 
 #
@@ -1086,13 +1101,13 @@ eliminarProcesoDeMemoria(){
 # 	return por stdout, es necesario = la llamada de la función a una variable para "capturar" el return.
 ajustarMemoriaParaElProceso(){
 	local posicionEnLaQueEmpiezaElHuecoEnMemoria	
-
-	posicionEnLaQueEmpiezaElHuecoEnMemoria="$(encontrarHuecoEnMemoria $1)"
+	debug "ajustarMemoriaParaElProceso() valor de \$1 = $1\fin "
+	posicionEnLaQueEmpiezaElHuecoEnMemoria="$(encontrarHuecoEnMemoria "$1")"
 
 	#FIXME no se si funciona
 	if (( posicionEnLaQueEmpiezaElHuecoEnMemoria == "null")); then
 		reubicarProcesos
-		posicionEnLaQueEmpiezaElHuecoEnMemoria="$(encontrarHuecoEnMemoria $1)"
+		posicionEnLaQueEmpiezaElHuecoEnMemoria="$(encontrarHuecoEnMemoria "$1")"
 	fi
 
 	echo "$posicionEnLaQueEmpiezaElHuecoEnMemoria"
@@ -1110,8 +1125,8 @@ encontrarHuecoEnMemoria(){
 	local -i cabeEnMemoria=0 #boolean
 	local -i posicionInicialEnLaQueEmpiezaElHueco=1
 	local -i sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco=1
-
-	if ((proceso["$1",P_TAMANIO] <= memoriaLibre)); then
+	debug "encontrarHuecoEnMemoria() valor de \$1 = $1fin "
+	if ((proceso[$1,$P_TAMANIO] <= memoriaLibre)); then
 		#Contamos el número de posiciones vacias consecutivas
 		#Si tienen el mismo tamaño que la memoria, metemos el proceso en ese hueco.
 		#si hemos recorrido todo el array, y no cabe en ningun lado, reubicamos.
@@ -1184,22 +1199,25 @@ reubicarProcesos(){
 }
 
 dibujarMemoria(){
+	
 	#FIXME es muy cutre/temporal
-	echo "Tamaño memoria: $tamMemoria | Uso de memoria: $memoriaLibre"
+	echo "Tamaño memoria: $tamMemoria | Memoria libre: $memoriaLibre"
 	echo "memoria:"
 
-	for((i=0;i<tamMemoria;i++)); do
-		echo "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
+	#FIXME la memoria empeza en 0 o en 1????
+	for((i=1;i<=tamMemoria;i++)); do
+		echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
 	done
-	for((i=0;i<tamMemoria;i++)); do
-		echo "${memoriaSegunNecesidades[$i,$MEM_TOSTRING]}"
+	echo "" #salto de línea
+	for((i=1;i<=tamMemoria;i++)); do
+		echo -n "${memoriaSegunNecesidades[$i,$MEM_TOSTRING]}"
 	done
 
 }
 
 ejecucion(){
 	local -i procEjecutados=0
-	local -i tiempoEjec=0
+	local -i tiempoEjecucion=0
 
 	local -i partLibres=$numeroParticiones
 	local -i procesoCPUAnterior
@@ -1212,24 +1230,37 @@ ejecucion(){
 	local -i i
 	local -i aux #auxiliar que indica la particion que se ha introducido un proceso
 	local -i cambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
-	local -i bool #booleano para comprobar si se ha echado un proceso (apropiativo)
+	local -i seHaExpulsadoAlgunProceso=0 #booleano para comprobar si se ha echado un proceso (apropiativo)
 	#Empieza la ejecucion del programa
 
 	#TODO: Inicializar el array de memoria
-	#
+	vaciarMemoria
+	debug "Memoria vaciada! cantidad libre = $memoriaLibre"
 
 	while [ $procEjecutados -lt $numProc ]; do # mientras el numero de procesos ejecutados sea menor a procesos total
 		clear
 
-		echo "Tiempo de ejecución: $tiempoEjec"
+		echo "Tiempo de ejecución: $tiempoEjecucion"
 
 		#Introducimos a la cola los procesos que han llegado a memoria
 		for((i=1;i<=numProc;i++)) do
-			if [ "${procesos[$i,2]}" = $tiempoEjec ]; then
+			if (( ${procesos[$i,$P_TLLEGADA]} == "$tiempoEjecucion" )); then
 				anadirCola $i
 			fi
-		done		
+		done
 
+		for((i=1;i<=tamCola;i++)); do
+			echo "Cola [$i] = ${cola[$i]}"
+		done
+		debug "Tamaño de la cola actual: $tamCola"
+		
+
+		if (( tamCola >=1 )); then
+			aniadirProcesoAMemoria "${cola[1]}"
+			
+		fi
+		dibujarMemoria
+		imprimirTabla 1 2 3 4 7 $P_ESTADO
 		#comprobamos si alguno de los procesos que estan en memoria, han terminado
 			#Si han terminado
 			#Los sacamos
@@ -1246,14 +1277,15 @@ ejecucion(){
 				#Lo introducimos
 			#si no hay
 				#reubicamos
-
+		
 		dibujarMemoria
-
+		tiempoEjecucion=$tiempoEjecucion+1
+		breakpoint "Fin del while"
 	done
 
 	rm temp
 	clear
-	imprimirTabla 1 2 3 4 7 8
+	imprimirTabla 1 2 3 4 7 8 
 	informeTabla 1 2 3 7 8
 	imprimirLCyan "Tiempo de ejecución medio: $BOLD$tEjecMedio"
 	imprimirLCyan "Tiempo de espera medio: $BOLD$tEsperaMedio"
@@ -1264,12 +1296,9 @@ ejecucion(){
 	
 }
 
-ejecucion2020(){
-	clear
-
-}
-
 #funcionDeTesteo
+
+
 
 #main
 cargaDatos $opcionYN
