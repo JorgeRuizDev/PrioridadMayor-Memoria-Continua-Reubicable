@@ -31,8 +31,6 @@ echo -e "\e[0;36m		║\e[0m										\e[0;36m║\e[0m"
 echo -e "\e[0;36m		╚═══════════════════════════════════════════════════════════════════════════════╝\e[0m\n"
 echo "" >>informePrioridadMenor.txt
 
-echo `tput sitm`Me gusta hacer poles`tput sgr0`
-
 echo "	╔═══════════════════════════════════════════════════════════════════════════════╗" >> informePrioridadMenor.txt
 echo "	║										║" >> informePrioridadMenor.txt
 echo "	║				Informe de Práctica				║" >> informePrioridadMenor.txt
@@ -53,7 +51,7 @@ declare opcionApropiativo
 declare opcionEstatico
 declare -A procesos
 declare -a memoria
-declare -a cabeceraProcesos=("PID" "NOMBRE PROCESO" "T.LLEGADA" "T.EJECUCIÓN" "PRIORIDAD" "MEMORIA" "T.EJEC.REST" "T.ESPERA" "T.RETORNO" "ESTADO ACTUAL")
+declare -a cabeceraProcesos=("PID" "NOMBRE PROCESO" "T.LLEGADA" "T.EJECUCIÓN" "PRIORIDAD" "MEMORIA" "T.EJEC.REST" "T.ESPERA" "T.RETORNO" "ESTADO ACTUAL" "COLOR")
 
 #Array con la cola | Empieza en 1, por lo que el valor 0 siempre se podrá saltar (nota alumno 2020: Lo arrays empiezan siempre en 0, pero paso de cambiarlo)
 declare -a cola
@@ -96,8 +94,8 @@ declare -r MEM_INDICE=0
 declare -r MEM_TOSTRING=1
 
 declare -r MEM_HUECO_VACIO="null"
-declare -r MEM_STRING_HUECO_VACIO="-"
-declare -r MEM_STRING_HUECOSINCOLOR="X"
+declare -r MEM_STRING_HUECO_VACIO="━━"
+declare -r MEM_STRING_HUECOSINCOLOR="╟─╢"
 
 
 
@@ -549,7 +547,7 @@ menuAlgoritmo(){
 # @param $@: Imprime todos los stings pasados como argumento, por si se quieren visualizar variables. 
 breakpoint(){
 	
-	if [[ $BREAKPOINT_ENABLED = true ]]; then
+	if [[ $BREAKPOINT_ENABLED == true ]]; then
 		local bufferTemporal
 
 		if (($# == 0));then 
@@ -757,7 +755,7 @@ datosAleatorios(){
 		numAleatorio procesos[$i,$P_TLLEGADA] 0 15 #numero aleatorio de t.llegada entre 0 y 15
 		numAleatorio procesos[$i,$P_TEJECUCION] 1 10 #numero aleatorio de t.ejec entre 0 y 10		
 		numAleatorio procesos[$i,$P_PRIORIDAD] $priorMin $priorMax #numero aleatorio de prioridad entre prioriMin y priorMax
-		numAleatorio procesos[$i,$P_TAMANIO] 1 $tamPart #numero aleatorio de tamaño entre 1 y tamPart
+		numAleatorio procesos[$i,$P_TAMANIO] 1 $tamMemoria #numero aleatorio de tamaño entre 1 y tamPart
 	done
 }
 
@@ -1030,28 +1028,30 @@ vaciarMemoria(){
 # Date: 22/02/2020
 # @param $1: indice del proceso a guardar en la particion
 aniadirProcesoAMemoria(){
-	#TODO: inicializar $memoriaLibre en algun lado con el tamaño total de memoria
-	#Dicho tamaño de momento va a ser fijo
-	local -i posicionEnLaQueEmpiezaElHuecoEnMemoria
+	local posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar
+	
+	#FIXME aquí a veces se rompe
+	if [[ ${procesos[$1,$P_TAMANIO]} -le $memoriaLibre ]]; then
+		procesos[$1,$P_ESTADO]=$STAT_MEMO
 
-	debug "Testeando el valor de memoria libre $memoriaLibre"
-	if ((proceso[$1,P_TAMANIO] <= memoriaLibre)); then
-		proceso[$1,$P_ESTADO]=$STAT_MEMO
-
-		eliminarCola #sacamos al primer proceso de la cola
-
-		posicionEnLaQueEmpiezaElHuecoEnMemoria="$(ajustarMemoriaParaElProceso ${proceso[$1,$P_TAMANIO]})"
-
-		if [[ $posicionEnLaQueEmpiezaElHuecoEnMemoria == "null"  ]];then
-			breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), el return de ajustarMemoriaParaElProceso() no es posible || PROGRAMACIÓN DEFENSIVA"
+		eliminarCola #sacamos al primer proceso de la cola (el que acabamos de introducir)
+		
+		
+		ajustarMemoriaParaElProceso "${procesos[$1,$P_TAMANIO]}" "posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar"
+		#FIXME "posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar" no recibe el valor desde el return.
+		if [[ $posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar == "null"  ]] || [[ $posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar == "" ]];then
+			breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), el return de ajustarMemoriaParaElProceso() no es posible ($posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar) || PROGRAMACIÓN DEFENSIVA"
 		fi
+		
+		debug "vamos a dibujar el proceso; valores posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar= $posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar;"
+		local -i ultimaPosicionADibujarElProceso=$((posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar  + ${procesos[$1,$P_TAMANIO]}))
 
-		for((i=posicionEnLaQueEmpiezaElHuecoEnMemoria; i<${proceso[$1,$P_TAMANIO]}; i++)); do
-			#añadimos el indice
-			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_INDICE]=$1
-			#Añadimos la salida por pantalla con COLOR 
-			
-			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]=${proceso[$1,${P_COLOR}]}$MEM_STRING_HUECOSINCOLOR${NC}
+		#FIXME: $posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar no tiene ningún valor en este punto. Las funciones que lo devuelven igual no funcionan correctamente.
+		for((i=posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar; i<ultimaPosicionADibujarElProceso; i++)); do
+				#añadimos el indice
+			memoriaSegunNecesidades[$i,$MEM_INDICE]=$1
+				#Añadimos la salida por pantalla con COLOR 
+			memoriaSegunNecesidades[$i,$MEM_TOSTRING]="${procesos[$1,${P_COLOR}]}$MEM_STRING_HUECOSINCOLOR${NC}"
 
 			if [[ $i -gt $tamMemoria  ]];then
 				breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), has añadido a más memoria de la existente || PROGRAMACIÓN DEFENSIVA"
@@ -1060,11 +1060,10 @@ aniadirProcesoAMemoria(){
 		
 
 
-		memoriaLibre=$($memoriaLibre - ${proceso[$1,$P_TAMANIO]})
+		memoriaLibre=$((memoriaLibre - ${procesos[$1,$P_TAMANIO]}))
 	fi
 	
 }
-
 
 # Si el proceso se encuentra en memoria
 #  -Se elimina el proceso en memoria
@@ -1073,21 +1072,21 @@ aniadirProcesoAMemoria(){
 # Date: 22/02/2020
 # @param $1: indice del proceso a borrar de memoria
 eliminarProcesoDeMemoria(){
-
 	local -i estabaEnMemoria=0
 
-	#FIXME estoy igual no rula
+
+	echo $MEM_INDICE; $1
 	for((i=1;i<=tamMemoria;i++)); do
 		#Si el proceso de una dirección coincide con el del índice pasado, borramos dicho proceso
-		if (( $1 = memoriaSegunNecesidades[$i,$MEM_INDICE] ));then
+		if [[ $1 -eq ${memoriaSegunNecesidades[$i,$MEM_INDICE]} ]];then
 			estabaEnMemoria=1
 			memoriaSegunNecesidades[$i,$MEM_INDICE]=$MEM_HUECO_VACIO
 			memoriaSegunNecesidades[$i,$MEM_TOSTRING]=$MEM_STRING_HUECO_VACIO
 		fi
 	done
-	memoriaLibre=$($memoriaLibre + ${proceso[$1,$P_TAMANIO]})
+	memoriaLibre=$((memoriaLibre + ${procesos[$1,$P_TAMANIO]}))
 
-	if (( estabaEnMemoria = 1)); then
+	if (( estabaEnMemoria == 1)); then
 		procesos[$1,$P_ESTADO]=$STAT_FIN
 	fi
 }
@@ -1097,27 +1096,27 @@ eliminarProcesoDeMemoria(){
 # Si es necesario, reubica la memoria.
 # Date: 22/02/2020
 # @param $1: Tamaño del proceso
+# @param $2/return: Variable en la que se almacenará el valor de salida de esta función
 # @return posición en la que empieza el huevo ó null si no hay suficiente hueco.
 # 	return por stdout, es necesario = la llamada de la función a una variable para "capturar" el return.
 ajustarMemoriaParaElProceso(){
 	local posicionEnLaQueEmpiezaElHuecoEnMemoria	
-	debug "ajustarMemoriaParaElProceso() valor de \$1 = $1\fin "
-	posicionEnLaQueEmpiezaElHuecoEnMemoria="$(encontrarHuecoEnMemoria "$1")"
-
-	#FIXME no se si funciona
+	
+	encontrarHuecoEnMemoria "$1" posicionEnLaQueEmpiezaElHuecoEnMemoria
+	
 	if (( posicionEnLaQueEmpiezaElHuecoEnMemoria == "null")); then
 		reubicarProcesos
-		posicionEnLaQueEmpiezaElHuecoEnMemoria="$(encontrarHuecoEnMemoria "$1")"
+		encontrarHuecoEnMemoria "$1" posicionEnLaQueEmpiezaElHuecoEnMemoria
 	fi
-
-	echo "$posicionEnLaQueEmpiezaElHuecoEnMemoria"
-
+	
+	eval $2="$posicionEnLaQueEmpiezaElHuecoEnMemoria"
 }
 
 # Nombre: encontrarHuecoEnMemoria
 # Descripción: Función que calcula la posición / si es posible introducir $1 unidades de memoria continuas en memoria. 
 # Date 22/02/2020
 # @param1 tamaño del hueco a encontrar / tamaño del proceso a emplazar
+# @param $2/return: Variable en la que se almacenará el valor de salida de esta función
 # @return posición en la que empieza el huevo ó null si no hay suficiente hueco.
 # 	return por stdout, es necesario = la llamada de la función a una variable para "capturar" el return.
 encontrarHuecoEnMemoria(){
@@ -1125,36 +1124,40 @@ encontrarHuecoEnMemoria(){
 	local -i cabeEnMemoria=0 #boolean
 	local -i posicionInicialEnLaQueEmpiezaElHueco=1
 	local -i sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco=1
-	debug "encontrarHuecoEnMemoria() valor de \$1 = $1fin "
-	if ((proceso[$1,$P_TAMANIO] <= memoriaLibre)); then
+	
+	if [[ ${procesos[$1,$P_TAMANIO]} -le $memoriaLibre ]]; then
 		#Contamos el número de posiciones vacias consecutivas
 		#Si tienen el mismo tamaño que la memoria, metemos el proceso en ese hueco.
 		#si hemos recorrido todo el array, y no cabe en ningun lado, reubicamos.
-
+		
 		for((i=1;i<=tamMemoria;i++)); do
+			
 			if [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} -eq $MEM_HUECO_VACIO ]]; then #Si hueco esta vacio
 				((numeroDeHuecosLibresConsecutivos++))
 
-				if ((sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco = 1)); then
+				if ((sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco == 1)); then
+					debug "ha encontrado el hueco inicial"
 					posicionInicialEnLaQueEmpiezaElHueco=$i
 					sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco=0
 				fi
 				
-				if ((numeroDeHuecosLibresConsecutivos = "$1")); then #Si el proceso tiene el tamaño mínimo del hueco comprobado
+				if ((numeroDeHuecosLibresConsecutivos == $1)); then #Si el proceso tiene el tamaño mínimo del hueco comprobado
+					debug "El proceso si que cabe"
 					cabeEnMemoria=1
 					break
 				fi
-			else
+			else #La posición estaba ocupada (miss): Reiniciamos el contador del primer miss
 				numeroDeHuecosLibresConsecutivos=0
 				sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco=1
 			fi
+
 		done
 	fi
-
+	debug "encontrarHuecoEnMemoria() valor de posicionInicialEnLaQueEmpiezaElHueco: $posicionInicialEnLaQueEmpiezaElHueco. cabeEnMemoria: $cabeEnMemoria"
 	if (( cabeEnMemoria == 0)); then
-		echo "null"
+		eval ${2}="null"
 	else
-		echo "$posicionInicialEnLaQueEmpiezaElHueco"
+		eval ${2}="$posicionInicialEnLaQueEmpiezaElHueco"
 	fi
 }
 
@@ -1186,7 +1189,7 @@ reubicarProcesos(){
 			#añadimos el indice
 			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_INDICE]=$indice
 			#Añadimos la salida por pantalla con COLOR
-			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]=${proceso[$indice,${P_COLOR}]}$MEM_STRING_HUECO_VACIO${NC}
+			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]=${procesos[$indice,${P_COLOR}]}$MEM_STRING_HUECO_VACIO${NC}
 
 			if (( ultimaPosicionMemoria > tamMemoria)); then 
 				breakpoint "Colega, tenemos un problemón en reubicarProcesos(), te has salido del array de memoria"
@@ -1198,20 +1201,31 @@ reubicarProcesos(){
 	
 }
 
+coloresRand(){
+	local -i numeroColorFondo
+	for((i=1;i<=numProc;i++)); do
+		numAleatorio numeroColorFondo 41 47
+		color=${_GREEN}
+		procesos[$i,$P_COLOR]=$color
+	done
+	
+
+}
+
 dibujarMemoria(){
 	
 	#FIXME es muy cutre/temporal
 	echo "Tamaño memoria: $tamMemoria | Memoria libre: $memoriaLibre"
 	echo "memoria:"
 
-	#FIXME la memoria empeza en 0 o en 1????
 	for((i=1;i<=tamMemoria;i++)); do
 		echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
 	done
 	echo "" #salto de línea
 	for((i=1;i<=tamMemoria;i++)); do
-		echo -n "${memoriaSegunNecesidades[$i,$MEM_TOSTRING]}"
+		echo -ne "${memoriaSegunNecesidades[$i,$MEM_TOSTRING]}"
 	done
+	echo ""
 
 }
 
@@ -1253,14 +1267,13 @@ ejecucion(){
 			echo "Cola [$i] = ${cola[$i]}"
 		done
 		debug "Tamaño de la cola actual: $tamCola"
-		
 
 		if (( tamCola >=1 )); then
+			#FIXME: Es necesario meter intentar meter todos los procesos de la cola al mismo tiempo, si alguno falla (porque la memoria está llena), parar el bucle.
 			aniadirProcesoAMemoria "${cola[1]}"
-			
 		fi
-		dibujarMemoria
-		imprimirTabla 1 2 3 4 7 $P_ESTADO
+		
+		imprimirTabla 1 2 3 4 7 $P_ESTADO $P_TAMANIO $P_COLOR
 		#comprobamos si alguno de los procesos que estan en memoria, han terminado
 			#Si han terminado
 			#Los sacamos
@@ -1281,6 +1294,13 @@ ejecucion(){
 		dibujarMemoria
 		tiempoEjecucion=$tiempoEjecucion+1
 		breakpoint "Fin del while"
+		numeropcpu=1
+		if (( memoriaLibre < 15));then 
+			eliminarProcesoDeMemoria $numeropcpu
+			numeroCPU
+			eliminarCola
+		fi
+		
 	done
 
 	rm temp
@@ -1304,6 +1324,7 @@ ejecucion(){
 cargaDatos $opcionYN
 escribeDatos
 ordenarProcesos
+coloresRand
 inicializarArrays
 clear
 imprimirTabla 1 2 3 4 5
