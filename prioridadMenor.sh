@@ -58,7 +58,10 @@ declare -a cola
 
 declare -r numCol=5
 declare -i numProc=0
+
+# Índice que almacena el proceso que está ejécutándose en CPU
 declare -i procesoCPU=0
+
 declare -i partCPU=0
 declare priorMin
 declare priorMax
@@ -71,7 +74,7 @@ declare abrirInforme
 #Según Necesidades (2020):
 declare tamMemoria=15
 declare memoriaLibre
-
+declare -a lineaEstadoCPU
 #FIXME borrame loko | Edit más tarde: Igual no hay que borrarlo, este es un buen momento para instanciarlo, ahora o durante la ejecución. 
 memoriaLibre=$tamMemoria
 
@@ -99,6 +102,8 @@ declare -r MEM_STRING_HUECOSINCOLOR="╟─╢"
 
 
 
+
+	
 #Colores de texto
 #ejemplo: echo -e "${B_RED}texto en rojo negrita${GREEN}texto en verde${NC}"
 declare -r DEFAULT='\e[39m' #Color por defecto
@@ -143,6 +148,7 @@ declare -r NC='\e[0m'
 declare -r _GREEN='\e[42m'
 declare -r _RED='\e[41m'
 declare -r _YELLOW='\e[43m'
+
 
 #	######################################
 #	Declares 2020:
@@ -253,10 +259,7 @@ forzarCierre(){
 	read -ers
 
 	#Funciones a ejecutar aquí abajo: {
-
 		deleteGeneratedFiles
-
-
 
 	#	}
 
@@ -617,8 +620,6 @@ deleteGeneratedFiles(){
 
 # Nombre: establecerPrioridad
 # Descripcion: establece el tipo de prioridad considerando priorMin y priorMax. El valor se usara para comparar en la ejecución
-#
-# Nota 2020:
 # Globales: tipoPrioridad
 establecerPrioridad(){
 	#si priorMin es un número más pequeño que priorMax el tipo de prioridad es menor
@@ -1014,6 +1015,9 @@ setCPU(){
 }
 #
 
+# Nombre: vaciarMemoria
+# Date: 22/02/2020
+# Funcinamiento: Vacía la memoria segúnNcesidades, o la pone en su estado por defecto.
 vaciarMemoria(){
 	for((i=1;i<=tamMemoria;i++)); do
 		memoriaSegunNecesidades[$i,$MEM_INDICE]=$MEM_HUECO_VACIO
@@ -1030,6 +1034,11 @@ vaciarMemoria(){
 aniadirProcesoAMemoria(){
 	local posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar
 	
+	#Si el param1 está vacío, no hacemos nada.
+	if [[ $1 = "" ]];then
+		return
+	fi
+
 	#FIXME aquí a veces se rompe
 	if [[ ${procesos[$1,$P_TAMANIO]} -le $memoriaLibre ]]; then
 		procesos[$1,$P_ESTADO]=$STAT_MEMO
@@ -1207,7 +1216,9 @@ reubicarProcesos(){
 	done
 	
 }
-
+# Nombre: DEV_modificarMemoria
+# Date: 27/01/2020
+# Descripción: Función que permite manipular la memoria de forma manual. Diseñada para testear el comportamiento de esta. 
 DEV_modificarMemoria(){
 	local -i opcion
 	local -i index
@@ -1250,37 +1261,9 @@ DEV_modificarMemoria(){
 		fi
 	fi
 }	
+DEV_ejecutarSoloMemoria(){
 
-coloresRand(){
-	local -i numeroColorFondo
-	for((i=1;i<=numProc;i++)); do
-		numAleatorio numeroColorFondo 41 47
-		color=${_GREEN}
-		procesos[$i,$P_COLOR]=$color
-	done
-	
-
-}
-
-dibujarMemoria(){
-	
-	#FIXME es muy cutre/temporal
-	echo "Tamaño memoria: $tamMemoria | Memoria libre: $memoriaLibre"
-	echo "memoria:"
-
-	for((i=1;i<=tamMemoria;i++)); do
-		echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
-	done
-	echo "" #salto de línea
-	for((i=1;i<=tamMemoria;i++)); do
-		echo -ne "${memoriaSegunNecesidades[$i,$MEM_TOSTRING]}"
-	done
-	echo ""
-
-}
-
-ejecucion(){
-	local -i procEjecutados=0
+		local -i procEjecutados=0
 	local -i tiempoEjecucion=0
 
 	local -i partLibres=$numeroParticiones
@@ -1325,6 +1308,127 @@ ejecucion(){
 		
 		imprimirTabla 1 2 3 4 7 $P_ESTADO $P_TAMANIO $P_COLOR
 		DEV_modificarMemoria
+		dibujarMemoria
+		tiempoEjecucion=$((tiempoEjecucion+1))
+		breakpoint "Fin del while"
+		numeropcpu=1
+		done
+
+}
+coloresRand(){
+	local -i numeroColorFondo
+	for((i=1;i<=numProc;i++)); do
+		numAleatorio numeroColorFondo 41 47
+		color=${_GREEN}
+		procesos[$i,$P_COLOR]=$color
+	done
+	
+
+}
+
+dibujarMemoria(){
+	
+	#FIXME es muy cutre/temporal
+	echo "Tamaño memoria: $tamMemoria | Memoria libre: $memoriaLibre"
+	echo "memoria:"
+
+	for((i=1;i<=tamMemoria;i++)); do
+		echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
+	done
+	echo "" #salto de línea
+	for((i=1;i<=tamMemoria;i++)); do
+		echo -ne "${memoriaSegunNecesidades[$i,$MEM_TOSTRING]}"
+	done
+	echo ""
+
+}
+
+# Nombre: aniadirSiguientePRocesoACPU
+# Date: 27/01/2020
+# Descripción: De entre todos los procesos en memoria, añade el proces con la prioridad más alta a CPU
+aniadirSiguienteProcesoACPU(){
+	echo "Añadiendo Proceso a CPU"
+	local -i prioridadMasAltaEnMemoria=$((priorMin-1))
+	local -i procesoConLaPrioMasAltaEnMemoria=0
+	
+	#Buscamos el proceso con la prioridad más alta en memoria
+	for ((i=1; i<=$tamMemoria; i++));do
+		#Si el hueco en memoria tiene un proceso/es distinto de null
+		if [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} != "$MEM_HUECO_VACIO" ]]; then
+			#Si el procoes encontrado tiene una prioridad mayor que la prioridad más alta encontrada hasta el momento, lo guradamos.
+			if [[ procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD] -gt $prioridadMasAltaEnMemoria ]]; then 
+				prioridadMasAltaEnMemoria=procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD];
+				procesoConLaPrioMasAltaEnMemoria=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
+			fi
+		fi
+	done
+
+	
+
+
+	#	-lt significa que la prioridad minima es un número menos que la prioridad máxima
+	#	-gt significa que la prioridad mínima es mayor que la prioridad máxima
+	if [[ $tipoPrioridad = "-gt" ]]; then
+		for ((i=0; i<))
+	fi
+}
+
+dibujarEstadoCPU(){
+
+	echo "Esto es el estado de la CPU"
+}
+
+ejecucion(){
+	local -i procEjecutados=0
+	local -i tiempoEjecucion=0
+
+	local -i partLibres=$numeroParticiones
+	local -i procesoCPUAnterior
+	local  tEjecMedio=0
+	local  tEsperaMedio=0
+	local  tRetornoMedio=0
+	local tEjecAcumulado=0
+	local tEsperaAcumulado=0
+	local tRetornoAcumulado=0
+	local -i i
+	local -i aux #auxiliar que indica la particion que se ha introducido un proceso
+	local -i cambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
+	local -i seHaExpulsadoAlgunProceso=0 #booleano para comprobar si se ha echado un proceso (apropiativo)
+	#Empieza la ejecucion del programa
+
+	#TODO: Inicializar el array de memoria
+	vaciarMemoria
+	
+
+	while [ $procEjecutados -lt $numProc ]; do # mientras el numero de procesos ejecutados sea menor a procesos total
+		clear
+
+		echo "Tiempo de ejecución: $tiempoEjecucion"
+
+		#Introducimos a la cola los procesos que han llegado a memoria
+		for((i=1;i<=numProc;i++)) do
+			if (( ${procesos[$i,$P_TLLEGADA]} == "$tiempoEjecucion" )); then
+				anadirCola $i
+			fi
+		done
+
+		#Volcamos toda la cola en memoria (si cabe)
+		while (( tamCola >=1 )); do
+			#FIXME: Igual es necesario comprobar que el proceso sea menor que el tamaño restante antes de introducirlo.
+			aniadirProcesoAMemoria "${cola[1]}"
+		done
+		
+		imprimirTabla 1 2 3 4 7 $P_ESTADO $P_TAMANIO
+		DEV_modificarMemoria
+
+		#Comprobaciones de CPU
+		#Si no hay ningún proceso en CPU, o el proceso está terminado
+		if [[ $procesoCPU -eq 0 ]] || [[ ${procesos[$procesoCPU,$P_ESTADO]} = "$STAT_FIN" ]]; then
+			#Si hay algún proceso en memoria
+			if [[ $memoriaLibre -lt $tamMemoria ]]; then
+				aniadirSiguientePRocesoACPU
+			fi
+		fi
 		#comprobamos si alguno de los procesos que estan en memoria, han terminado
 			#Si han terminado
 			#Los sacamos
@@ -1345,7 +1449,7 @@ ejecucion(){
 		dibujarMemoria
 		tiempoEjecucion=$((tiempoEjecucion+1))
 		breakpoint "Fin del while"
-		numeropcpu=1
+		
 
 		
 	done
