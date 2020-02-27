@@ -755,7 +755,7 @@ datosAleatorios(){
 		numAleatorio procesos[$i,$P_TLLEGADA] 0 15 #numero aleatorio de t.llegada entre 0 y 15
 		numAleatorio procesos[$i,$P_TEJECUCION] 1 10 #numero aleatorio de t.ejec entre 0 y 10		
 		numAleatorio procesos[$i,$P_PRIORIDAD] $priorMin $priorMax #numero aleatorio de prioridad entre prioriMin y priorMax
-		numAleatorio procesos[$i,$P_TAMANIO] 1 $tamMemoria #numero aleatorio de tamaño entre 1 y tamPart
+		numAleatorio procesos[$i,$P_TAMANIO] 1 5 #numero aleatorio de tamaño entre 1 y tamPart
 	done
 }
 
@@ -1177,14 +1177,20 @@ reubicarProcesos(){
 
 	#Almacenamos los procesos que están en memoria
 	for((i=1;i<=tamMemoria;i++)); do
+		#Si el índice que hay en i posición de memoria NO es NI el indice vacío, ni el último indice encontrado, guardamos el índice en un array
 		if [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} != "$ultimoIndiceEncontrado" ]] && [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} != "$MEM_HUECO_VACIO" ]]; then
-			bufferReubicacion+=("${memoriaSegunNecesidades[$i,$MEM_INDICE]}")
+			bufferReubicacion+=("${memoriaSegunNecesidades[$i,$MEM_INDICE]}")	#Guardamos el índice
+			ultimoIndiceEncontrado=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
 		fi
 	done
 	
+	for indice in "${bufferReubicacion[@]}"; do
+		echo "Indice en memoria: $indice"
+	done
+
 	vaciarMemoria
 
-	for indice in "{bufferReubicacion[@]}"; do
+	for indice in "${bufferReubicacion[@]}"; do
 		
 		for((i=0;i<procesos[$indice,$P_TAMANIO];i++)); do
 			#añadimos el indice
@@ -1195,7 +1201,7 @@ reubicarProcesos(){
 			if (( ultimaPosicionMemoria > tamMemoria)); then 
 				breakpoint "Colega, tenemos un problemón en reubicarProcesos(), te has salido del array de memoria"
 			fi
-			(ultimaPosicionMemoria++)
+			((ultimaPosicionMemoria++))
 		done
 		
 	done
@@ -1243,7 +1249,7 @@ DEV_modificarMemoria(){
 			DEV_modificarMemoria
 		fi
 	fi
-	
+}	
 
 coloresRand(){
 	local -i numeroColorFondo
