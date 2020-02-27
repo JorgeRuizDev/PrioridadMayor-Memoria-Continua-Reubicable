@@ -1119,7 +1119,7 @@ ajustarMemoriaParaElProceso(){
 	fi
 	
 	eval $2="$posicionEnLaQueEmpiezaElHuecoEnMemoria"
-	breakpoint "posicionEnLaQueEmpiezaElHuecoEnMemoria: $posicionEnLaQueEmpiezaElHuecoEnMemoria"
+	
 }
 
 # Nombre: encontrarHuecoEnMemoria
@@ -1163,7 +1163,7 @@ encontrarHuecoEnMemoria(){
 
 		done
 	fi
-	debug "encontrarHuecoEnMemoria() valor de posicionInicialEnLaQueEmpiezaElHueco: $posicionInicialEnLaQueEmpiezaElHueco. cabeEnMemoria: $cabeEnMemoria"
+	
 	if (( cabeEnMemoria == 0)); then
 		eval ${2}="null"
 	else
@@ -1228,6 +1228,7 @@ DEV_modificarMemoria(){
 	echo "1) Añadir el último elemento de la cola (${procesos[${cola[1]},$P_NOMBRE]}) a memoria"
 	echo "2) Eliminar un proceso de memoria (A partir de su posición en la tabla)"
 	echo "3) Reubicar memoria"
+	echo "4) Añadir siguiente proceso a CPU (El que tenga la prioridad más alta de los que estan en memoria)"
 	echo "*) Nada"
 
 	read -r opcion
@@ -1247,6 +1248,9 @@ DEV_modificarMemoria(){
 	;;
 	3)
 		reubicarProcesos
+	;;
+	4)
+		aniadirSiguienteProcesoACPU
 	;;
 	*)
 		finDeEjecucion=true
@@ -1348,29 +1352,54 @@ dibujarMemoria(){
 # Descripción: De entre todos los procesos en memoria, añade el proces con la prioridad más alta a CPU
 aniadirSiguienteProcesoACPU(){
 	echo "Añadiendo Proceso a CPU"
-	local -i prioridadMasAltaEnMemoria=$((priorMin-1))
+	#Si la prioridad menor es más baja que la mayor
+	local -i prioridadMasAltaEnMemoria
 	local -i procesoConLaPrioMasAltaEnMemoria=0
-	
-	#Buscamos el proceso con la prioridad más alta en memoria
-	for ((i=1; i<=$tamMemoria; i++));do
-		#Si el hueco en memoria tiene un proceso/es distinto de null
-		if [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} != "$MEM_HUECO_VACIO" ]]; then
-			#Si el procoes encontrado tiene una prioridad mayor que la prioridad más alta encontrada hasta el momento, lo guradamos.
-			if [[ procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD] -gt $prioridadMasAltaEnMemoria ]]; then 
-				prioridadMasAltaEnMemoria=procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD];
-				procesoConLaPrioMasAltaEnMemoria=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
-			fi
-		fi
-	done
 
-	
+	#Si la prioridad menor es más alta que la mayor
 
+	#Vamos a asignar a estas variables dos valores dependiendo del valor de $tipoPrioridad
+	local -i elementoAComparar1
+	local -i elementoAComparar2
 
+	#	Valores de $tipoPrioridad
 	#	-lt significa que la prioridad minima es un número menos que la prioridad máxima
 	#	-gt significa que la prioridad mínima es mayor que la prioridad máxima
+	#	Más información sobre el porqué de estos valores en la cabezera de la función establecerPrioridad()
 	if [[ $tipoPrioridad = "-gt" ]]; then
-		for ((i=0; i<))
+		prioridadMasAltaEnMemoria=$((priorMin-1))
+		#Buscamos el proceso con la prioridad más alta en memoria
+		for ((i=1; i<=tamMemoria; i++));do
+			#Si el hueco en memoria tiene un proceso/es distinto de null
+			if [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} != "$MEM_HUECO_VACIO" ]]; then
+				#Si el proceso encontrado tiene una prioridad mayor que la prioridad más alta encontrada hasta el momento, lo guradamos.
+				if [[ procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD] -lt $prioridadMasAltaEnMemoria ]]; then 
+					prioridadMasAltaEnMemoria=procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD];
+					procesoConLaPrioMasAltaEnMemoria=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
+				fi
+			fi
+		done
+	elif [[ $tipoPrioridad = "-lt" ]]; then
+	prioridadMasAltaEnMemoria=$((priorMax+1))
+		#Buscamos el proceso con la prioridad más baja en memoria
+		for ((i=1; i<=tamMemoria; i++));do
+			#Si el hueco en memoria tiene un proceso/es distinto de null
+			if [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} != "$MEM_HUECO_VACIO" ]]; then
+				#Si el proceso encontrado tiene una prioridad mayor que la prioridad más alta encontrada hasta el momento, lo guradamos.
+				if [[ procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD] -gt $prioridadMasAltaEnMemoria ]]; then 
+					prioridadMasAltaEnMemoria=procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD];
+					procesoConLaPrioMasAltaEnMemoria=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
+				fi
+			fi
+		done
+	else
+		breakpoint "Función aniadirSiguienteProcesoACPU(); \$tipoPrioridad tiene un valor inválido ($tipoPrioridad)"
 	fi
+
+	procesoCPU=$procesoConLaPrioMasAltaEnMemoria
+	procesos[$procesoCPU,$P_ESTADO]="$STAT_ENCPU"
+	
+	
 }
 
 dibujarEstadoCPU(){
