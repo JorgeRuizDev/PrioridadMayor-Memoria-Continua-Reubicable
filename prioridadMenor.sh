@@ -548,7 +548,7 @@ menuAlgoritmo(){
 breakpoint(){
 	
 	if [[ $BREAKPOINT_ENABLED == true ]]; then
-		local bufferTemporal
+		
 
 		if (($# == 0));then 
 			echo -n ">"
@@ -556,7 +556,7 @@ breakpoint(){
 			echo -n "Breakpoint > $1"
 		fi
 
-		read -r bufferTemporal 
+		read -ers
 
 	fi
 }
@@ -1075,7 +1075,7 @@ eliminarProcesoDeMemoria(){
 	local -i estabaEnMemoria=0
 
 
-	echo $MEM_INDICE; $1
+	echo "$MEM_INDICE; $1"
 	for((i=1;i<=tamMemoria;i++)); do
 		#Si el proceso de una dirección coincide con el del índice pasado, borramos dicho proceso
 		if [[ $1 -eq ${memoriaSegunNecesidades[$i,$MEM_INDICE]} ]];then
@@ -1110,6 +1110,7 @@ ajustarMemoriaParaElProceso(){
 	fi
 	
 	eval $2="$posicionEnLaQueEmpiezaElHuecoEnMemoria"
+	breakpoint "posicionEnLaQueEmpiezaElHuecoEnMemoria: $posicionEnLaQueEmpiezaElHuecoEnMemoria"
 }
 
 # Nombre: encontrarHuecoEnMemoria
@@ -1146,7 +1147,7 @@ encontrarHuecoEnMemoria(){
 					cabeEnMemoria=1
 					break
 				fi
-			else #La posición estaba ocupada (miss): Reiniciamos el contador del primer miss
+			else #La posición estaba ocupada (miss): Reiniciamos el contador del primer hit
 				numeroDeHuecosLibresConsecutivos=0
 				sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco=1
 			fi
@@ -1200,6 +1201,49 @@ reubicarProcesos(){
 	done
 	
 }
+
+DEV_modificarMemoria(){
+	local -i opcion
+	local -i index
+	local -i volverAIntroducir
+	local -i finDeEjecucion=false
+	echo "Función de desarrollo para la modificación de memoria"
+	echo "1) Añadir el último elemento de la cola (${procesos[${cola[1]},$P_NOMBRE]}) a memoria"
+	echo "2) Eliminar un proceso de memoria (A partir de su posición en la tabla)"
+	echo "3) Reubicar memoria"
+	echo "*) Nada"
+
+	read -r opcion
+
+	case $opcion in
+	1)
+		if [[ ${procesos[${cola[1]},$P_TAMANIO]} -le $memoriaLibre ]];then
+			aniadirProcesoAMemoria "${cola[1]}" 
+		else
+			imprimirAviso "No se puede introducir el proceso a memoria porque esta no tiene hueco"
+		fi
+	;;
+	2)
+		echo -n "Introduzca el índice del proceso: "
+		read -r index
+		eliminarProcesoDeMemoria $index
+	;;
+	3)
+		reubicarProcesos
+	;;
+	*)
+		finDeEjecucion=true
+	;;
+	esac
+
+	if [[ $finDeEjecucion = "false" ]];then
+		scanfSiNo "Desea introducir otro proceso?" volverAIntroducir
+
+		if [[ $volverAIntroducir = 's' ]]; then
+			DEV_modificarMemoria
+		fi
+	fi
+	
 
 coloresRand(){
 	local -i numeroColorFondo
@@ -1268,12 +1312,13 @@ ejecucion(){
 		done
 		debug "Tamaño de la cola actual: $tamCola"
 
-		if (( tamCola >=1 )); then
+		#if (( tamCola >=1 )); then
 			#FIXME: Es necesario meter intentar meter todos los procesos de la cola al mismo tiempo, si alguno falla (porque la memoria está llena), parar el bucle.
-			aniadirProcesoAMemoria "${cola[1]}"
-		fi
+		#	aniadirProcesoAMemoria "${cola[1]}"
+		#fi
 		
 		imprimirTabla 1 2 3 4 7 $P_ESTADO $P_TAMANIO $P_COLOR
+		DEV_modificarMemoria
 		#comprobamos si alguno de los procesos que estan en memoria, han terminado
 			#Si han terminado
 			#Los sacamos
@@ -1292,14 +1337,10 @@ ejecucion(){
 				#reubicamos
 		
 		dibujarMemoria
-		tiempoEjecucion=$tiempoEjecucion+1
+		tiempoEjecucion=$((tiempoEjecucion+1))
 		breakpoint "Fin del while"
 		numeropcpu=1
-		if (( memoriaLibre < 15));then 
-			eliminarProcesoDeMemoria $numeropcpu
-			numeroCPU
-			eliminarCola
-		fi
+
 		
 	done
 
