@@ -75,8 +75,7 @@ declare abrirInforme
 declare tamMemoria=15
 declare memoriaLibre
 declare -a lineaEstadoCPU
-#FIXME borrame loko | Edit más tarde: Igual no hay que borrarlo, este es un buen momento para instanciarlo, ahora o durante la ejecución. 
-memoriaLibre=$tamMemoria
+
 
 
 
@@ -96,9 +95,10 @@ declare -r MEM_INDICE=0
 #Capa donde se almacena el texto a imprimir
 declare -r MEM_TOSTRING=1
 
+#Declares de los contenidos por defecto
 declare -r MEM_HUECO_VACIO="null"
 declare -r MEM_STRING_HUECO_VACIO="━━"
-declare -r MEM_STRING_HUECOSINCOLOR="╟─╢"
+declare -r MEM_STRING_HUECOSINCOLOR="━━"
 
 
 
@@ -458,9 +458,8 @@ cargaDatos(){
 	1)
 		menuAlgoritmo
 		clear
-		imprimirLCyan "Has elegido Apropiativo: $opcionApropiativo y Estatico: $opcionEstatico"
-		scanfNum "¿Tamaño de la particion?: " tamPart 1
-		scanfNum "¿Número de particiones? " numeroParticiones 1
+		#imprimirLCyan "Has elegido Apropiativo: $opcionApropiativo y Estatico: $opcionEstatico"
+		scanfNum "¿Tamaño de la memoria?: " tamMemoria 1
 		scanfNumMinMax "¿Prioridad mínima?" priorMin -10000 10000 
 		scanfNumMinMax "¿Prioridad máxima?" priorMax -10000 10000
 		establecerPrioridad 
@@ -499,10 +498,7 @@ menuAlgoritmo(){
 	echo -e "\n ${L_YELLOW}╔════════════════════════════════════════════╗
  ║${NC}${B_BLUE} ¿Como quieres el algoritmo?                ${NC}${L_YELLOW}║
  ║                                            ║
- ║${NC} 1-No Apropiativo y Estático                ${L_YELLOW}║
- ║${NC} 2-Apropiativo y Estático                   ${L_YELLOW}║
- ║${NC} 3-No apropiativo y No Estático (Dinámico)  ${L_YELLOW}║
- ║${NC} 4-Apropiativo y No estático (Dinámico)     ${L_YELLOW}║
+ ║${NC} 1-Estándar                                 ${L_YELLOW}║
  ║${NC} 5-Ayuda (glosario)                         ${L_YELLOW}║
  ║${NC} 6-Salir del programa                       ${L_YELLOW}║
  ║                                            ║
@@ -656,7 +652,7 @@ datosManualProcesos(){
 	clear
 	imprimirTabla 1 2 3 4 5
 	#TODO: Sustituir por el tamaño máximo de la memoria. 
-	scanfNumMinMax "¿Tamaño del proceso $1? (Menor o igual del tamaño de partición [$tamPart] ): " procesos[$1,$P_TAMANIO] 1 $tamPart
+	scanfNumMinMax "¿Tamaño del proceso $1? (Menor o igual del tamaño de partición [$tamPart] ): " procesos[$1,$P_TAMANIO] 1 $tamMemoria
 	clear
 	imprimirTabla 1 2 3 4 5
 	scanfSiNo "¿Estas seguro de los datos del último proceso introducido? [s/n]: " seguro
@@ -747,6 +743,8 @@ comprobarDatosFichero(){
 # número de procesos, etc con números aleatorios llamando a la función numAleatorio
 datosAleatorios(){
 	local -i i
+	#FIXME borrame loko | Edit más tarde: Igual no hay que borrarlo, este es un buen momento para instanciarlo, ahora o durante la ejecución. 
+	tamMemoria=15
 	numAleatorio tamPart 1 100 #aleatorio de tamaño de partición
 	tamPart=$[$tamPart * 10] #multiplicamos por 10 para que acabe en 0 el tamaño particion, es meramente estetico
 	numAleatorio numeroParticiones 1 7 
@@ -1201,57 +1199,7 @@ DEV_modificarMemoria(){
 		fi
 	fi
 }	
-DEV_ejecutarSoloMemoria(){
 
-		local -i procEjecutados=0
-	local -i tiempoEjecucion=0
-
-	local -i partLibres=$numeroParticiones
-	local -i procesoCPUAnterior
-	local  tEjecMedio=0
-	local  tEsperaMedio=0
-	local  tRetornoMedio=0
-	local tEjecAcumulado=0
-	local tEsperaAcumulado=0
-	local tRetornoAcumulado=0
-	local -i i
-	local -i aux #auxiliar que indica la particion que se ha introducido un proceso
-	local -i cambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
-	local -i seHaExpulsadoAlgunProceso=0 #booleano para comprobar si se ha echado un proceso (apropiativo)
-	#Empieza la ejecucion del programa
-
-	#TODO: Inicializar el array de memoria
-	vaciarMemoria
-	debug "Memoria vaciada! cantidad libre = $memoriaLibre"
-
-	while [ $procEjecutados -lt $numProc ]; do # mientras el numero de procesos ejecutados sea menor a procesos total
-		clear
-
-		echo "Tiempo de ejecución: $tiempoEjecucion"
-
-		#Introducimos a la cola los procesos que han llegado a memoria
-		for((i=1;i<=numProc;i++)) do
-			if (( ${procesos[$i,$P_TLLEGADA]} == "$tiempoEjecucion" )); then
-				anadirCola $i
-			fi
-		done
-
-		for((i=1;i<=tamCola;i++)); do
-			echo "Cola [$i] = ${cola[$i]}"
-		done
-		debug "Tamaño de la cola actual: $tamCola"
-
-
-		
-		imprimirTabla 1 2 3 4 7 $P_ESTADO $P_TAMANIO $P_COLOR
-		DEV_modificarMemoria
-		dibujarMemoria
-		tiempoEjecucion=$((tiempoEjecucion+1))
-		breakpoint "Fin del while"
-		numeropcpu=1
-		done
-
-}
 coloresRand(){
 	local -i numeroColorFondo
 	for((i=1;i<=numProc;i++)); do
@@ -1373,7 +1321,12 @@ comprobarSiElProcesoEnCPUHaTerminado(){
 
 dibujarEstadoCPU(){
 
-	echo "Esto es el estado de la CPU. No tenemos presupuesto para más, en un futuro igual ponemos una línea con colorines y todo"
+	#echo "Esto es el estado de la CPU. No tenemos presupuesto para más, en un futuro igual ponemos una línea con colorines y todo"
+	echo "CPU:"
+	for((i=0;i<tiempoEjecucion;i++)); do
+		echo -n "${lineaEstadoCPU[$i]}|"
+	done
+	echo ""
 }
 
 ejecucion(){
@@ -1395,13 +1348,20 @@ ejecucion(){
 	vaciarMemoria
 	
 
-	while [ $procEjecutados -lt $numProc ]; do # mientras el numero de procesos ejecutados sea menor a procesos total
+	while [[ $procEjecutados -lt $numProc ]]; do # mientras el numero de procesos ejecutados sea menor a procesos total
 		clear
 
 		echo "Tiempo de ejecución: $tiempoEjecucion"
 		echo "Prioridad más alta: $priorMax"
 		echo "Prioridad más baja: $priorMin" 
 		comprobarSiElProcesoEnCPUHaTerminado
+
+		#Si se ha ejecutado el último proceso, paramos el bucle para no tener ejecuciones en blanco
+		if [[ $procEjecutados -eq $numProc ]];then
+			break
+		fi
+
+
 		#Introducimos a la cola los procesos que han llegado a memoria
 		for((i=1;i<=numProc;i++)) do
 			if [[ ${procesos[$i,$P_TLLEGADA]} -eq "$tiempoEjecucion" ]]; then
@@ -1432,22 +1392,26 @@ ejecucion(){
 		imprimirTabla $P_NOMBRE $P_TAMANIO $P_PRIORIDAD $P_ESTADO $P_TRESTANTE
 		ejecutarUnCiloDeCPU
 		dibujarMemoria
+		dibujarEstadoCPU
 		echo "num. pro. ejec $procEjecutados"
 		breakpoint "Fin del while"
 		
 	done
 
-	rm temp
+	rm temp > /dev/null
 	clear
 	imprimirTabla 1 2 3 4 7 8 
 	informeTabla 1 2 3 7 8
+	echo "Tiempo de ejecución Total: $tiempoEjecucion"
+	echo "Prioridad más alta: $priorMax"
+	echo "Prioridad más baja: $priorMin"
 	imprimirLCyan "Tiempo de ejecución medio: $BOLD$tEjecMedio"
 	imprimirLCyan "Tiempo de espera medio: $BOLD$tEsperaMedio"
 	imprimirLCyan "Tiempo de retorno medio: $BOLD$tRetornoMedio"
 	escribirInforme "Tiempo de ejecución medio: $tEjecMedio"
 	escribirInforme "Tiempo de espera medio: $tEsperaMedio"
 	escribirInforme "Tiempo de retorno medio: $tRetornoMedio"
-	
+	dibujarEstadoCPU
 }
 
 #funcionDeTesteo
@@ -1457,6 +1421,8 @@ ejecucion(){
 #main
 cargaDatos $opcionYN
 escribeDatos
+#FIXME borrame loko | Edit más tarde: Igual no hay que borrarlo, este es un buen momento para instanciarlo, ahora o durante la ejecución. 
+memoriaLibre=$tamMemoria
 ordenarProcesos
 coloresRand
 inicializarArrays
@@ -1473,8 +1439,6 @@ echo -e "
 ║${L_GREEN} Número de Procesos: ${NC}${B_BLUE}$numProc ${NC}		║
 ║${L_GREEN} Prioridad Mínima: ${NC}${B_BLUE}$priorMin${NC}			║
 ║${L_GREEN} Prioridad Máxima: ${NC}${B_BLUE}$priorMax${NC}			║
-║${L_GREEN} Apropiativo: ${NC}${B_BLUE}$opcionApropiativo${NC}			║
-║${L_GREEN} Estático: ${NC}${B_BLUE}$opcionEstatico${NC}				║
 ║					║
 ╚═══════════════════════════════════════╝"
 escribirInforme "
@@ -1485,8 +1449,6 @@ escribirInforme "
 ║ Número de Procesos: $numProc 		║
 ║ Prioridad Mínima: $priorMin			║
 ║ Prioridad Máxima: $priorMax			║
-║ Apropiativo: $opcionApropiativo			║
-║ Estático: $opcionEstatico				║
 ║					║
 ╚═══════════════════════════════════════╝"
 imprimirLCyan "Pulsa enter para continuar" -n
@@ -1497,3 +1459,13 @@ scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
 if [ "$abrirInforme" = "s" ]; then
 	less -R informePrioridadMenor.txt
 fi
+
+#Cosas que no funcionan #FIXME/TODO:
+#	Entrada por fichero: hay que quitar la entrada con particiones y meter el tamaño memoria
+#	Cálculos de datos medios
+#	Colorines
+#	Tiempo de retorno y esas vainas
+#	Líneas de tiempo y CPU en condiciones
+#	Informes en condiciones
+#	Si dos prioridades son iguales, el proceso que entra en CPU es el que esté más a la izqda en la memoria
+#
