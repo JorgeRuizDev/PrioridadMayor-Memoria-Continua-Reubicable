@@ -2,7 +2,7 @@
 
 resize -s 50 120 >/dev/null
 clear
-
+echo "$(date '+%d/%m/%Y %H:%M:%S')"> informeDebug.txt
 echo -e "\e[0;36m			╔══════════════════════════════════════════════════════════╗\e[0m"
 echo -e "\e[0;36m			║\e[0m                     Creative Commons                     \e[0;36m║\e[0m"
 echo -e "\e[0;36m			║\e[0m                                                          \e[0;36m║\e[0m"
@@ -156,8 +156,9 @@ declare -r _YELLOW='\e[43m'
 
 # Variable de control de BREAKPOINTS 
 #//@see breakpoint
-declare BREAKPOINT_ENABLED=true
-
+declare -r BREAKPOINT_ENABLED=true
+declare -r BREAKPOINT_AUTO=true
+declare -r BREAKPOINT_AUTO_TIMEOUT="0.5"
 #Valores de la estructura/struc (El array bidimensional procesos)
 #//@see procesos
 #Los siguientes valores (1-9) son las posiciones del struct existentes a las versiones previas a 2020
@@ -172,7 +173,6 @@ declare -r P_TRETORNO=8		#	$P_TRETORNO
 declare -r P_ESTADO=9		#	$P_ESTADO
 
 #Valores 2020:
-declare -r P_PID=0
 declare -r P_COLOR=10
 
 
@@ -211,8 +211,9 @@ declare -r DEBUG_PERSISTENT_FILE=false
 #
 #
 
-
-
+#FIXME: Bugs conocidos 28/02/2020
+# Hay veces en las que se mete en memoria un proceso que no cabe
+# Hay veces en las que el proceso no sale de CPU, aún con tiempo restante negativo
 
 
 # Nombre: escribirInforme
@@ -558,9 +559,11 @@ breakpoint(){
 		else
 			echo -n "Breakpoint > $1"
 		fi
-
-		read -ers
-
+		if [[ $BREAKPOINT_AUTO == "true" ]];then
+			sleep $BREAKPOINT_AUTO_TIMEOUT
+		else
+			read -ers
+		fi
 	fi
 }
 
@@ -756,7 +759,7 @@ datosAleatorios(){
 		numAleatorio procesos[$i,$P_TLLEGADA] 0 15 #numero aleatorio de t.llegada entre 0 y 15
 		numAleatorio procesos[$i,$P_TEJECUCION] 1 10 #numero aleatorio de t.ejec entre 0 y 10		
 		numAleatorio procesos[$i,$P_PRIORIDAD] $priorMin $priorMax #numero aleatorio de prioridad entre prioriMin y priorMax
-		numAleatorio procesos[$i,$P_TAMANIO] 1 5 #numero aleatorio de tamaño entre 1 y tamPart
+		numAleatorio procesos[$i,$P_TAMANIO] 1 10 #numero aleatorio de tamaño entre 1 y tamPart
 	done
 }
 
@@ -940,81 +943,6 @@ anadirMemoria(){
 	done
 }
 
-# Nombre: imprimirParticion
-# Descripcion: imprime en pantalla cada una de las particiones siendo de 100 espacios el tamaño de la particion
-imprimirParticion(){
-	local -i i
-	local -i j
-	local -i k
-	local -i aux
-	for ((i=1;i<=numeroParticiones;i++)) do
-		aux=$[${procesos[${memoria[$i]},5]} * 100 / $tamPart] # regla de 3 calcula el numero de espacios necesarios para el proceso
-		echo -e " ____________________________________________________________________________________________________"
-        echo -e -n "|$_RED" # fondo de color rojo para lo que ocupa el proceso
-		for ((j=0;j<aux;j++)) do #imprime los _ necesarios para el proceso
-			echo -e -n "_"
-		done
-		echo -e -n "${NC}$_GREEN" # fondo de color verde lo que sobra del proceso
-		for ((k=0;k<100-aux;k++)) do #imprime los _ hasta llegar a 100
-			echo -e -n "_"
-		done
-		echo -e "${NC}|${B_BLUE} Particion $i${NC}"
-		if [ ${memoria[$i]} -ne 0 ]; then # si no esta vacio la particion muestra los datos del proceso en la particion	
-			echo -e "${B_RED} ${procesos[${memoria[$i]},1]} [Prior. ${procesos[${memoria[$i]},$P_PRIORIDAD]}]: ${procesos[${memoria[$i]},5]}M/${tamPart}M ($aux%)${NC}"
-		fi
-	done
-}
-
-# Nombre: escribirParticion
-# Descripcion: escribe en el informe las particiones
-escribirParticion(){
-	local -i i
-	local -i porcentaje
-	for ((i=1;i<=numeroParticiones;i++)) do
-		if [ ${memoria[$i]} -ne 0 ]; then
-			porcentaje=$[${procesos[${memoria[$i]},5]} * 100 / ${tamPart}]
-			echo "Partición $i: ${procesos[${memoria[$i]},1]} [Prior. ${procesos[${memoria[$i]},$P_PRIORIDAD]}]: ${procesos[${memoria[$i]},5]}M/${tamPart}M ($porcentaje%)" >> temp
-		else
-			echo "Partición $i: Libre" >> temp
-		fi
-	done
-}
-
-
-# Nombre: setCPU
-# Descripcion: introduce un proceso en CPU si esta libre o hay otro proceso con menor prioridad
-# @param $1: boolean que indica si ha habido un cambio en la CPU
-#
-setCPU(){
-	local -i menorPrioridad
-	menorPrioridad=$procesoCPU
-	for((i=1;i<=numeroParticiones;i++)) do
-		
-		#FIXME	Esta zona está rota por el linter: No detecta que la variable $tipoPrioridad es un comparador
-		
-		#
-		if [ ${procesos[${memoria[$i]},$P_PRIORIDAD]} -gt ${procesos[$menorPrioridad,$P_PRIORIDAD]} ]; then
-			
-			zmenorPrioridad=${memoria[$i]}
-			partCPU=$i #particion que esta en la cpu
-		#si tienen la misma prioridad, se compara los indices de los procesos de la tabla.
-		#Como esta ordenado se coge el de menor T.Llegada y si son iguales se coge el primero que se haya escrito
-		elif [ ${procesos[${memoria[$i]},$P_PRIORIDAD]} -eq ${procesos[$menorPrioridad,$P_PRIORIDAD]} -a ${memoria[$i]} -lt $menorPrioridad ]; then
-			menorPrioridad=${memoria[$i]}
-			partCPU=$i
-		fi
-	done
-	if [ $procesoCPU -ne $menorPrioridad ]; then
-		procesos[$procesoCPU,$P_ESTADO]=$STAT_MEMO
-		procesoCPU=$menorPrioridad
-		procesos[$procesoCPU,$P_ESTADO]=$STAT_ENCPU
-		eval ${1}=1 #modifica el boolean que se ha pasado por 1, cuando haya una modificacion en el CPU
-	else
-		eval ${1}=0
-	fi
-}
-#
-
 # Nombre: vaciarMemoria
 # Date: 22/02/2020
 # Funcinamiento: Vacía la memoria segúnNcesidades, o la pone en su estado por defecto.
@@ -1035,11 +963,11 @@ aniadirProcesoAMemoria(){
 	local posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar
 	
 	#Si el param1 está vacío, no hacemos nada.
-	if [[ $1 = "" ]];then
+	if [[ $1 = "" ]] || [[ $tamCola -le 0 ]];then
 		return
 	fi
 
-	#FIXME aquí a veces se rompe
+	
 	if [[ ${procesos[$1,$P_TAMANIO]} -le $memoriaLibre ]]; then
 		procesos[$1,$P_ESTADO]=$STAT_MEMO
 
@@ -1047,9 +975,12 @@ aniadirProcesoAMemoria(){
 		
 		
 		ajustarMemoriaParaElProceso "${procesos[$1,$P_TAMANIO]}" "posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar"
-		#FIXME "posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar" no recibe el valor desde el return.
+		
 		if [[ $posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar == "null"  ]] || [[ $posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar == "" ]];then
 			breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), el return de ajustarMemoriaParaElProceso() no es posible ($posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar) || PROGRAMACIÓN DEFENSIVA"
+			imprimirErrorCritico "Lo de arriba"
+			dibujarMemoria
+			breakpoint
 		fi
 		
 		debug "vamos a dibujar el proceso; valores posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar= $posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar;"
@@ -1064,6 +995,7 @@ aniadirProcesoAMemoria(){
 
 			if [[ $i -gt $tamMemoria  ]];then
 				breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), has añadido a más memoria de la existente || PROGRAMACIÓN DEFENSIVA"
+				salirPorErrorCritico "Lo de arriba"
 			fi
 		done
 		
@@ -1093,14 +1025,17 @@ eliminarProcesoDeMemoria(){
 			memoriaSegunNecesidades[$i,$MEM_TOSTRING]=$MEM_STRING_HUECO_VACIO
 		fi
 	done
-	memoriaLibre=$((memoriaLibre + ${procesos[$1,$P_TAMANIO]}))
+	
 
 	if (( estabaEnMemoria == 1)); then
 		procesos[$1,$P_ESTADO]=$STAT_FIN
+		memoriaLibre=$((memoriaLibre + ${procesos[$1,$P_TAMANIO]}))
 	fi
+	imprimirAviso "Hemos borrado algo de memoria: Abajo como se ve!"
+	dibujarMemoria
+	imprimirAviso "Pues ya no se ve la memoria!!!"
 }
 
-#
 # Funcion que comprueba si un proces cabe en la memoria TOTAL, o es necesario reubicar.
 # Si es necesario, reubica la memoria.
 # Date: 22/02/2020
@@ -1115,6 +1050,7 @@ ajustarMemoriaParaElProceso(){
 	
 	if (( posicionEnLaQueEmpiezaElHuecoEnMemoria == "null")); then
 		reubicarProcesos
+		imprimirAviso "La memoria está siendo reubicada"
 		encontrarHuecoEnMemoria "$1" posicionEnLaQueEmpiezaElHuecoEnMemoria
 	fi
 	
@@ -1134,8 +1070,8 @@ encontrarHuecoEnMemoria(){
 	local -i cabeEnMemoria=0 #boolean
 	local -i posicionInicialEnLaQueEmpiezaElHueco=1
 	local -i sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco=1
-	
-	if [[ ${procesos[$1,$P_TAMANIO]} -le $memoriaLibre ]]; then
+	#FIXME: No encuentra bien el hueco, da falsos negativos a la hora de dice no haber hueco, pero si que hay.
+	if [[ $1 -le $memoriaLibre ]]; then
 		#Contamos el número de posiciones vacias consecutivas
 		#Si tienen el mismo tamaño que la memoria, metemos el proceso en ese hueco.
 		#si hemos recorrido todo el array, y no cabe en ningun lado, reubicamos.
@@ -1146,13 +1082,11 @@ encontrarHuecoEnMemoria(){
 				((numeroDeHuecosLibresConsecutivos++))
 
 				if ((sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco == 1)); then
-					debug "ha encontrado el hueco inicial"
 					posicionInicialEnLaQueEmpiezaElHueco=$i
 					sePuedeGuardarLaPosicioneEnLaQueEmpiezaElHueco=0
 				fi
 				
 				if ((numeroDeHuecosLibresConsecutivos == $1)); then #Si el proceso tiene el tamaño mínimo del hueco comprobado
-					debug "El proceso si que cabe"
 					cabeEnMemoria=1
 					break
 				fi
@@ -1164,7 +1098,9 @@ encontrarHuecoEnMemoria(){
 		done
 	fi
 	
-	if (( cabeEnMemoria == 0)); then
+	if [[ $cabeEnMemoria -eq 0 ]]; then
+		imprimirErrorCritico "encontrarHuecoEnMemoria(): El procesocon $1 tamaño no cabe..."
+		breakpoint
 		eval ${2}="null"
 	else
 		eval ${2}="$posicionInicialEnLaQueEmpiezaElHueco"
@@ -1305,10 +1241,7 @@ DEV_ejecutarSoloMemoria(){
 		done
 		debug "Tamaño de la cola actual: $tamCola"
 
-		#if (( tamCola >=1 )); then
-			#FIXME: Es necesario meter intentar meter todos los procesos de la cola al mismo tiempo, si alguno falla (porque la memoria está llena), parar el bucle.
-		#	aniadirProcesoAMemoria "${cola[1]}"
-		#fi
+
 		
 		imprimirTabla 1 2 3 4 7 $P_ESTADO $P_TAMANIO $P_COLOR
 		DEV_modificarMemoria
@@ -1353,66 +1286,99 @@ dibujarMemoria(){
 aniadirSiguienteProcesoACPU(){
 	echo "Añadiendo Proceso a CPU"
 	#Si la prioridad menor es más baja que la mayor
-	local -i prioridadMasAltaEnMemoria
-	local -i procesoConLaPrioMasAltaEnMemoria=0
+	local -i prioridadMasAlta
+	local -i procesoConPrioridadMasAlta
 
-	#Si la prioridad menor es más alta que la mayor
-
-	#Vamos a asignar a estas variables dos valores dependiendo del valor de $tipoPrioridad
-	local -i elementoAComparar1
-	local -i elementoAComparar2
-
+	if [[ $tipoPrioridad = "-lt" ]]; then
+		prioridadMasAlta=$((priorMin - 1))
+	elif [[ $tipoPrioridad = "-gt" ]]; then
+		prioridadMasAlta=$((priorMin + 1))
+	else
+		breakpoint "$(imprimirErrorCritico "aniadirSiguienteProcesoACPU(): No existe dicha ($tipoPrioridad) prioridad crack!")"
+	fi
+	
+	debug "Tipo de prioridad $tipoPrioridad; prioridadMasAlta: $prioridadMasAlta"
+	#FIXME: Esta basura merece ser compactada.
+	#FIXME: Esta basura directamente no entra. Replatéatela mejor illo. 
 	#	Valores de $tipoPrioridad
-	#	-lt significa que la prioridad minima es un número menos que la prioridad máxima
+	#	-lt significa que la prioridad minima es un número menor que la prioridad máxima
 	#	-gt significa que la prioridad mínima es mayor que la prioridad máxima
 	#	Más información sobre el porqué de estos valores en la cabezera de la función establecerPrioridad()
-	if [[ $tipoPrioridad = "-gt" ]]; then
-		prioridadMasAltaEnMemoria=$((priorMin-1))
-		#Buscamos el proceso con la prioridad más alta en memoria
-		for ((i=1; i<=tamMemoria; i++));do
-			#Si el hueco en memoria tiene un proceso/es distinto de null
-			if [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} != "$MEM_HUECO_VACIO" ]]; then
-				#Si el proceso encontrado tiene una prioridad mayor que la prioridad más alta encontrada hasta el momento, lo guradamos.
-				if [[ procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD] -lt $prioridadMasAltaEnMemoria ]]; then 
-					prioridadMasAltaEnMemoria=procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD];
-					procesoConLaPrioMasAltaEnMemoria=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
+	
+	for ((i=0; i<=tamMemoria; i++)); do
+		echo "prioridadMasAlta: $prioridadMasAlta | PID: $procesoConPrioridadMasAlta"
+		#Si la prioridad del proceso es mayor a la prioridad más alta encontrada
+		if [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} -ne $MEM_HUECO_VACIO ]]; then
+			if (( ${procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD]} > $prioridadMasAlta )); then
+				echo "entra en 1337"
+				if [[ $tipoPrioridad = "-lt" ]]; then
+					echo "entra en 1339"
+					procesoConPrioridadMasAlta=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
+					prioridadMasAlta=${procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD]} 
+				fi
+			elif (( ${procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD]} < $prioridadMasAlta )); then
+				echo "entra en 1344"
+				if [[ $tipoPrioridad = "-gt" ]]; then
+					echo "entra en 1346"
+					procesoConPrioridadMasAlta=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
+					prioridadMasAlta=${procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD]} 
 				fi
 			fi
-		done
-	elif [[ $tipoPrioridad = "-lt" ]]; then
-	prioridadMasAltaEnMemoria=$((priorMax+1))
-		#Buscamos el proceso con la prioridad más baja en memoria
-		for ((i=1; i<=tamMemoria; i++));do
-			#Si el hueco en memoria tiene un proceso/es distinto de null
-			if [[ ${memoriaSegunNecesidades[$i,$MEM_INDICE]} != "$MEM_HUECO_VACIO" ]]; then
-				#Si el proceso encontrado tiene una prioridad mayor que la prioridad más alta encontrada hasta el momento, lo guradamos.
-				if [[ procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD] -gt $prioridadMasAltaEnMemoria ]]; then 
-					prioridadMasAltaEnMemoria=procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD];
-					procesoConLaPrioMasAltaEnMemoria=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
-				fi
-			fi
-		done
-	else
-		breakpoint "Función aniadirSiguienteProcesoACPU(); \$tipoPrioridad tiene un valor inválido ($tipoPrioridad)"
-	fi
+		fi
+	done
 
-	procesoCPU=$procesoConLaPrioMasAltaEnMemoria
+
+	#Guardamos el índice del proceso y actualizamos su estado
+	debug "Tras el bucle: prioridadMasAlta: $prioridadMasAlta | PID: $procesoConPrioridadMasAlta"
+	debug "\$priorMax: $priorMax | \$priorMin: $priorMin" 
+	procesoCPU=$procesoConPrioridadMasAlta
 	procesos[$procesoCPU,$P_ESTADO]="$STAT_ENCPU"
 	
 	
 }
 
+# Nombre: ejecutarUnCicloDeCPU
+# Date: 27/01/2020
+# Descripción: Simula el comportamiento repetitivo de algunos momentos del programa
+#	-Calcula ciertos valores
+#	-Aumenta el tiempo de ejecución
+#	-Actualiza la línea de estado de CPU
+ejecutarUnCiloDeCPU(){
+	#Decrementamos en una unidad el tiempo restante del proceso en ejecución
+	procesos[$procesoCPU,$P_TRESTANTE]=$(( ${procesos[$procesoCPU,$P_TRESTANTE]}-1))
+	lineaEstadoCPU+=($procesoCPU)
+	
+	#TODO: Incrementar el tiempo de espera de los procesos en memoria
+	#TODO: Incrementar el tiempo de espera de los procesos en la cola
+
+	((tiempoEjecucion++))
+}
+
+comprobarSiElProcesoEnCPUHaTerminado(){
+
+	if [[ ${procesos[$procesoCPU,$P_TRESTANTE]} -eq 0 ]];then
+		imprimirLCyan "El proceso ${procesos[$procesoCPU,$P_NOMBRE]} ha terminado de ejecutarse en el instante $tiempoEjecucion"
+		((procEjecutados++))	#FIXME: Ojo! Esta variable es local. Posible bug.
+		#TODO: "Actualizar los tiempos"
+		#TODO: "Marcar cambio"
+		#Eliminamos el proceso de la CPU
+		
+		eliminarProcesoDeMemoria $procesoCPU
+		procesos[$procesoCPU,$P_ESTADO]=$STAT_FIN
+		breakpoint "Un proceso ha sido eliminado"
+		procesoCPU=0
+	fi
+
+}
+
 dibujarEstadoCPU(){
 
-	echo "Esto es el estado de la CPU"
+	echo "Esto es el estado de la CPU. No tenemos presupuesto para más, en un futuro igual ponemos una línea con colorines y todo"
 }
 
 ejecucion(){
 	local -i procEjecutados=0
 	local -i tiempoEjecucion=0
-
-	local -i partLibres=$numeroParticiones
-	local -i procesoCPUAnterior
 	local  tEjecMedio=0
 	local  tEsperaMedio=0
 	local  tRetornoMedio=0
@@ -1423,9 +1389,9 @@ ejecucion(){
 	local -i aux #auxiliar que indica la particion que se ha introducido un proceso
 	local -i cambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
 	local -i seHaExpulsadoAlgunProceso=0 #booleano para comprobar si se ha echado un proceso (apropiativo)
+	
+	procesoCPU=0 
 	#Empieza la ejecucion del programa
-
-	#TODO: Inicializar el array de memoria
 	vaciarMemoria
 	
 
@@ -1433,53 +1399,41 @@ ejecucion(){
 		clear
 
 		echo "Tiempo de ejecución: $tiempoEjecucion"
-
+		echo "Prioridad más alta: $priorMax"
+		echo "Prioridad más baja: $priorMin" 
+		comprobarSiElProcesoEnCPUHaTerminado
 		#Introducimos a la cola los procesos que han llegado a memoria
 		for((i=1;i<=numProc;i++)) do
-			if (( ${procesos[$i,$P_TLLEGADA]} == "$tiempoEjecucion" )); then
+			if [[ ${procesos[$i,$P_TLLEGADA]} -eq "$tiempoEjecucion" ]]; then
 				anadirCola $i
 			fi
 		done
 
 		#Volcamos toda la cola en memoria (si cabe)
-		while (( tamCola >=1 )); do
-			#FIXME: Igual es necesario comprobar que el proceso sea menor que el tamaño restante antes de introducirlo.
-			aniadirProcesoAMemoria "${cola[1]}"
+		while (( tamCola >= 1 )); do
+			if [[ ${procesos[${cola[1]},$P_TAMANIO]} -le $memoriaLibre ]]; then
+				aniadirProcesoAMemoria "${cola[1]}"
+			else
+				break
+			fi
 		done
 		
-		imprimirTabla 1 2 3 4 7 $P_ESTADO $P_TAMANIO
-		DEV_modificarMemoria
 
 		#Comprobaciones de CPU
 		#Si no hay ningún proceso en CPU, o el proceso está terminado
-		if [[ $procesoCPU -eq 0 ]] || [[ ${procesos[$procesoCPU,$P_ESTADO]} = "$STAT_FIN" ]]; then
+		if [[ $procesoCPU -eq 0 ]]; then
 			#Si hay algún proceso en memoria
 			if [[ $memoriaLibre -lt $tamMemoria ]]; then
-				aniadirSiguientePRocesoACPU
+				aniadirSiguienteProcesoACPU
+				#TODO: Marcar aquí cambio
 			fi
 		fi
-		#comprobamos si alguno de los procesos que estan en memoria, han terminado
-			#Si han terminado
-			#Los sacamos
-		#si no han terminado
-		#continuamos
 
-
-		#Si uno de los procesos con tLlegada == tEjecución
-		#Y el proceso siguiente en la cola cabe
-		#Ejecutamos la introduccion de un proceso en memoria
-
-			#Ejecución de un proceso en memoria
-			#Si hay un hueco los suficientemente grande como para introducir el proceso
-				#Lo introducimos
-			#si no hay
-				#reubicamos
-		
+		imprimirTabla $P_NOMBRE $P_TAMANIO $P_PRIORIDAD $P_ESTADO $P_TRESTANTE
+		ejecutarUnCiloDeCPU
 		dibujarMemoria
-		tiempoEjecucion=$((tiempoEjecucion+1))
+		echo "num. pro. ejec $procEjecutados"
 		breakpoint "Fin del while"
-		
-
 		
 	done
 
@@ -1537,10 +1491,9 @@ escribirInforme "
 ╚═══════════════════════════════════════╝"
 imprimirLCyan "Pulsa enter para continuar" -n
 read -s
-ejecucion
+ejecucion | tee -a informeDebug.txt
 
 scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
 if [ "$abrirInforme" = "s" ]; then
-	more informePrioridadMenor.txt
+	less -R informePrioridadMenor.txt
 fi
-
