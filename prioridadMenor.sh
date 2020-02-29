@@ -1,7 +1,7 @@
 #!/bin/bash
 
 resize -s 50 120 >/dev/null
-clear
+clear 
 
 echo -e "\e[0;36m			╔══════════════════════════════════════════════════════════╗\e[0m"
 echo -e "\e[0;36m			║\e[0m                     Creative Commons                     \e[0;36m║\e[0m"
