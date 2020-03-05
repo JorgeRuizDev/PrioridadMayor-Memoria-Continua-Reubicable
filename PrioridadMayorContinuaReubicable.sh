@@ -1362,8 +1362,7 @@ ejecucion(){
 	local -i aux #auxiliar que indica la particion que se ha introducido un proceso
 	local -i haHabidoUnCambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
 	
-	procesoCPU=0 
-	#Empieza la ejecucion del programa
+	procesoCPU=0 #Ponemos el proces actual en CPU a ninguno!
 	memoriaLibre=$tamMemoria
 	vaciarMemoria
 	
