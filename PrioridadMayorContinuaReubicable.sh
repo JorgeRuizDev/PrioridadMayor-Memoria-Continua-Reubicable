@@ -53,12 +53,7 @@ declare -A procesos
 declare -a memoria
 declare -a cabeceraProcesos=("PID" "NOMBRE PROCESO" "T.LLEGADA" "T.EJECUCIÓN" "PRIORIDAD" "MEMORIA" "T.EJEC.REST" "T.ESPERA" "T.RETORNO" "ESTADO ACTUAL" "COLOR")
 
-#Array que almacena el número de huecos máximo que puede ocupar el string a imprimir de cada proceso.
-#Por ejemplo, la referencia del proceso puede ocupar como máximo 3 huecos (p01 a p99), por lo que en la tabla imprimiremos 3 huecos máximo
-declare -a espacioProcesos=(3 3 3)
-
-#Array con la cola | Empieza en 1, por lo que el valor 0 siempre se podrá saltar 
-#(nota alumno 2020: Lo arrays empiezan siempre en 0, pero paso de cambiarlo, ten en cuenta que la mayoría de los arrays de esta práctica empiezan en 1, además igual en bash da problemas)
+#Array con la cola | Empieza en 1, por lo que el valor 0 siempre se podrá saltar (nota alumno 2020: Lo arrays empiezan siempre en 0, pero paso de cambiarlo)
 declare -a cola
 
 declare -r numCol=5
@@ -67,12 +62,12 @@ declare -i numProc=0
 # Índice que almacena el proceso que está ejécutándose en CPU
 declare -i procesoCPU=0
 
-
-declare -i priorMin
-declare -i priorMax			
-declare -i numeroParticiones #Borrar
-declare -i tamPart			
-declare -i tamCola=0
+declare -i partCPU=0
+declare priorMin
+declare priorMax
+declare numeroParticiones
+declare tamPart
+declare tamCola=0
 declare tipoPrioridad
 declare abrirInforme
 
@@ -83,10 +78,32 @@ declare -a lineaEstadoCPU
 
 
 
+
+
+# Memoria según necesidades es el array bidimensional en el que se almacenará la información de la memoria
+# No tengo intención de hacer un algoritmo eficiente para la memoria, por el simple hecho de 
+# que puede ser poco intuitivo para alumnos de primero
+#
+# Más adelante se explicará como estarán organizadas estas capas de memoria, y el contenido específico que almacenará cada capa
+declare -A memoriaSegunNecesidades
+#La memoria será un array bidimensional con N capas y M huecos, siendo M = tamMemoria
+#Así podremos almacenar que proceso se almacena en cada hueco.
+
+#Capa donde se guardaran los índices/Apuntadores/punteros de el proceso que se encuentra en cada posición de memoria respecto a la tabla de $procesos[]
+declare -r MEM_INDICE=0	
+
+#Capa donde se almacena el texto a imprimir
+declare -r MEM_TOSTRING=1
+
+#Declares de los contenidos por defecto
+declare -r MEM_HUECO_VACIO="null"
+declare -r MEM_STRING_HUECO_VACIO="━━"
+declare -r MEM_STRING_HUECOSINCOLOR="━━"
+
+
 	
 #Colores de texto
 #ejemplo: echo -e "${B_RED}texto en rojo negrita${GREEN}texto en verde${NC}"
-declare -a coloresLetras
 declare -r DEFAULT='\e[39m' #Color por defecto
 declare -r BLACK='\e[30m'
 declare -r RED='\e[31m'
@@ -104,9 +121,6 @@ declare -r L_BLUE='\e[94m' #Azul claro
 declare -r L_MAGENTA='\e[95m' #Magenta claro
 declare -r L_CYAN='\e[96m' #Cyan claro
 declare -r WHITE='\e[97m'
-
-coloresLetras=("$RED" "$GREEN" "$YELLOW" "$BLUE" "$MAGENTA" "$CYAN")
-
 #Colores en negrita
 declare -r BOLD='\e[1;39m'
 declare -r B_BLACK='\e[1;30m'
@@ -129,49 +143,10 @@ declare -r B_WHITE='\e[1;97m'
 declare -r NC='\e[0m' 
 
 #Colores de FONDO:
-declare -a coloresFondo
-declare -r _DEFAULT='\e[49m' #Color por defecto
-declare -r _BLACK='\e[40m'
-declare -r _RED='\e[41m'
 declare -r _GREEN='\e[42m'
+declare -r _RED='\e[41m'
 declare -r _YELLOW='\e[43m'
-declare -r _BLUE='\e[44m'
-declare -r _MAGENTA='\e[45m'
-declare -r _CYAN='\e[46m'
-declare -r _L_GRAY='\e[47m' #Gris claro
-declare -r _D_GRAY='\e[100m' #Gris oscuro
-declare -r _L_RED='\e[101m' #Rojo claro
-declare -r _L_GREEN='\e[102m' #Verde claro
-declare -r _L_YELLOW='\e[103m' #Amarillo claro
-declare -r _L_BLUE='\e[104m' #Azul claro
-declare -r _L_MAGENTA='\e[105m' #Magenta claro
-declare -r _L_CYAN='\e[106m' #Cyan claro
-declare -r _WHITE='\e[107m'
 
-coloresFondo=("$_RED" "$_GREEN" "$_YELLOW" "$_BLUE" "$_MAGENTA" "$_CYAN")
-
-# Memoria según necesidades es el array bidimensional en el que se almacenará la información de la memoria
-# No tengo intención de hacer un algoritmo eficiente para la memoria, por el simple hecho de 
-# que puede ser poco intuitivo para alumnos de primero
-#
-# Más adelante se explicará como estarán organizadas estas capas de memoria, y el contenido específico que almacenará cada capa
-declare -A memoriaSegunNecesidades
-#La memoria será un array bidimensional con 2 capas y M huecos, siendo M = tamMemoria
-#Así podremos almacenar que proceso se almacena en cada hueco.
-#Y en la capa MEM_INDICE guardar el índice/id del proceso (fila que ocupa en la tabla)
-#Y en la capa MEM_TOSTRING string con el color ya generado
-
-#Capa donde se guardaran los índices/Apuntadores/punteros de el proceso que se encuentra en cada posición de memoria respecto a la tabla de $procesos[]
-declare -r MEM_INDICE=0	
-
-#Capa donde se almacena el texto a imprimir
-declare -r MEM_TOSTRING=1
-
-	#Declares de los contenidos por defecto de la MEMORIA
-declare -r MEM_HUECO_VACIO="null"
-	#Valores que se imprimen por pantalla
-declare -r MEM_STRING_HUECO_VACIO="$_WHITE   ${_DEFAULT}"
-declare -r MEM_STRING_HUECOSINCOLOR="   "	#Se colorea con el color del proceso
 
 #	######################################
 #	Declares 2020:
@@ -196,8 +171,9 @@ declare -r P_TRETORNO=8		#	$P_TRETORNO
 declare -r P_ESTADO=9		#	$P_ESTADO
 
 #Valores 2020:
-declare -r P_COLOR=10		#Color del Fondo
-declare -r P_COLORLETRA=11	#Colod de las letras
+declare -r P_COLOR=10
+
+
 #Strings de estados/STATUS (Valores a asignar a P_ESTADO)
 declare -r STAT_MEMO="Memo."
 declare -r STAT_ENCPU="En CPU"
@@ -215,6 +191,9 @@ declare -r DEFAULT_DEBUG_OUTPUT_FILE_NAME="debug.txt"
 declare -r DEBUG_ENABLE=true
 declare    DEBUG_FIRST_EXECUTION=true
 declare -r DEBUG_PERSISTENT_FILE=false
+
+
+
 
 
 
@@ -905,8 +884,7 @@ convertirFicheroColorEnBlancoNegro(){
 	sed -r "s/\x1B\[(([0-9]{1,2})?(;)?([0-9]{1,2})?)?[m,K,H,f,J]//g" "$1" > "$2"
 
 	if [[ $3 = "true" ]];then
-		
-		rm "$1" && echo "El fichero $1 ha sido borrado"
+		rm "$1"
 	fi
 }
 
@@ -996,7 +974,7 @@ aniadirProcesoAMemoria(){
 				#añadimos el indice
 			memoriaSegunNecesidades[$i,$MEM_INDICE]=$1
 				#Añadimos la salida por pantalla con COLOR 
-			memoriaSegunNecesidades[$i,$MEM_TOSTRING]="${procesos[$1,${P_COLOR}]}$MEM_STRING_HUECOSINCOLOR${_DEFAULT}"
+			memoriaSegunNecesidades[$i,$MEM_TOSTRING]="${procesos[$1,${P_COLOR}]}$MEM_STRING_HUECOSINCOLOR${NC}"
 
 			if [[ $i -gt $tamMemoria  ]];then
 				breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), has añadido a más memoria de la existente || PROGRAMACIÓN DEFENSIVA"
@@ -1109,6 +1087,7 @@ reubicarProcesos(){
 
 	local ultimoIndiceEncontrado="/"
 	local -i ultimaPosicionMemoria=1
+	#FIXME esto igual no tira: EL unset igual no es correcto
 	
 	#Vaciamos el array
 	unset bufferReubicacion
@@ -1125,15 +1104,14 @@ reubicarProcesos(){
 
 	vaciarMemoria
 
-	#Rellenamos la memoria!
 	for indice in "${bufferReubicacion[@]}"; do
 		
 		for((i=0;i<procesos[$indice,$P_TAMANIO];i++)); do
 			#añadimos el indice
 			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_INDICE]=$indice
 			#Añadimos la salida por pantalla con COLOR
-			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]="${procesos[$indice,$P_COLOR]}$MEM_STRING_HUECOSINCOLOR${NC}"
-			
+			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]=${procesos[$indice,${P_COLOR}]}$MEM_STRING_HUECO_VACIO${NC}
+
 			if (( ultimaPosicionMemoria > tamMemoria)); then 
 				breakpoint "Colega, tenemos un problemón en reubicarProcesos(), te has salido del array de memoria"
 			fi
@@ -1191,55 +1169,24 @@ DEV_modificarMemoria(){
 			DEV_modificarMemoria
 		fi
 	fi
-}
+}	
 
-# Nombre: DEV_ImprimirColores
-# Date: 05/03/2020
-# Descripción: Imprime por todos los procesos en el sistema: El color del string y de fondo asignado
-DEV_ImprimirColores(){
+coloresRand(){
+	local -i numeroColorFondo
+	#TODO: Pregunta: Qué colorear y donde
+	for((i=1;i<=numProc;i++)); do
+		numAleatorio numeroColorFondo 41 47
+		color=${_GREEN}
+		procesos[$i,$P_COLOR]=$color
+	done
 	
-	for ((i = 1; i<= numProc; i++)); do
-		echo -e "Índice $i: ${procesos[$i,$P_COLORLETRA]}STRING${NC}   ${procesos[$i,$P_COLOR]}FONDO${NC}      |"
-	done
-	read -ers
+
 }
-# Nombre: asignarColoresTabla
-# Date: 05/03/2020
-# Descripción: Rellena las columnas $P_COLOR y $P_COLORLETRA de la tabla procesos con colores
-asignarColoresTabla(){
-	local -i i
-
-	for ((i=1; i <= numProc; i++)); do
-		asignarColorProceso "$i" "$i"
-	done
-}
-
-# Nombre: asignarColorProceso.
-# Date: 05/03/2020
-# Descripción: Pasado el índce del proceso y un entero, se asignará a dicho proceso el color correspondiente al entero. 
-# @Param $1: índice/puntero al proceso en la tabla procesos
-# @Param $2: entero cualquiera
-asignarColorProceso(){
-
-	if [[ $1 -gt 0 ]] && [[ $1 -le $numProc ]]; then
-		procesos[$1,$P_COLOR]=${coloresFondo[$2%${#coloresFondo[@]}]}
-		procesos[$1,$P_COLORLETRA]=${coloresLetras[$2%${#coloresLetras[@]}]}
-	else
-		imprimirErrorCritico "El proeso pasado no se encuentra en la tabla"
-	fi
-}
-
 
 dibujarMemoria(){
-	local -i memoriaEnUso
-	local memoriaEnUsoPorcieto #Es un string al ser float
-
-	memoriaEnUso=$((tamMemoria-memoriaLibre))
-	memoriaEnUsoPorciento=$(echo "scale=2;100*$memoriaEnUso/$tamMemoria" | bc -l)
-
+	
 	#FIXME es muy cutre/temporal
 	#TODO: Pregunta: Cómo dibujar la memoria?
-	imprimirLCyan "Uso de memoria: $memoriaEnUso/$tamMemoria ($memoriaEnUsoPorciento%)"
 	echo "Tamaño memoria: $tamMemoria | Memoria libre: $memoriaLibre"
 	echo "memoria:"
 
@@ -1288,16 +1235,11 @@ aniadirSiguienteProcesoACPU(){
 					procesoConPrioridadMasAlta=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
 					prioridadMasAlta=${procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD]} 
 				fi
-			elif ((${procesos[${memoriaSegunNecesidades[$i,$MEM_INDICE]},$P_PRIORIDAD]} == $prioridadMasAlta)); then
-				#Si tienen la misma prioridad ^
-				#Si su índice es menor (Significa que entró antes en memoria porque su t.llegada era menor)
-				if (( ${memoriaSegunNecesidades[$i,$MEM_INDICE]} < procesoConPrioridadMasAlta)); then
-					procesoConPrioridadMasAlta=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
-				fi
 			fi
 		fi
 	done
 
+	#TODO: Pregunta: Qué hacer cuando hay dos procesos con la misma prioridad?
 	#Guardamos el índice del proceso y actualizamos su estado
 	procesoCPU=$procesoConPrioridadMasAlta
 	procesos[$procesoCPU,$P_ESTADO]="$STAT_ENCPU"
@@ -1341,8 +1283,6 @@ dibujarEstadoCPU(){
 
 	#TODO: Pregunta: Como hacer la línea de CPU
 	echo "CPU: (no hay presupuesto para hacerlo)"
-
-	#TODO Igual hacerlo a tiempoEjecucion-1 si no queremos que aparezca el proceso hasta el final
 	for((i=0;i<tiempoEjecucion;i++)); do
 		echo -n "${lineaEstadoCPU[$i]}|"
 	done
@@ -1360,7 +1300,7 @@ ejecucion(){
 	local tRetornoAcumulado=0
 	local -i i
 	local -i aux #auxiliar que indica la particion que se ha introducido un proceso
-	local -i haHabidoUnCambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
+	local -i cambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
 	
 	procesoCPU=0 
 	#Empieza la ejecucion del programa
@@ -1370,8 +1310,6 @@ ejecucion(){
 
 	while [[ $procEjecutados -lt $numProc ]]; do # mientras el numero de procesos ejecutados sea menor a procesos total
 		clear
-
-		haHabidoUnCambio=0
 
 		echo "Tiempo de ejecución: $tiempoEjecucion"
 		echo "Prioridad más alta: $priorMax"
@@ -1389,8 +1327,6 @@ ejecucion(){
 		for((i=1;i<=numProc;i++)) do
 			if [[ ${procesos[$i,$P_TLLEGADA]} -eq "$tiempoEjecucion" ]]; then
 				anadirCola $i
-				imprimirLCyan "El proceso ${proccesos[$i,$P_NOMBRE]} ha entrado en el sistema en el instante $tiempoEjecucion"
-				haHabidoUnCambio=1
 			fi
 		done
 
@@ -1398,10 +1334,6 @@ ejecucion(){
 		while (( tamCola >= 1 )); do
 			if [[ ${procesos[${cola[1]},$P_TAMANIO]} -le $memoriaLibre ]]; then
 				aniadirProcesoAMemoria "${cola[1]}"
-				imprimirLCyan "El proceso  ${procesos[${cola[1]},$P_NOMBRE]} ha sido introducido en memoria."
-				imprimirLCyan "Uso de memoria tras la introducción: $(($tamMemoria-$memoriaLibre))/$tamMemoria ($(( ($tamMemoria-$memoriaLibre)/$tamMemoria*100))%)"
-				
-				haHabidoUnCambio=1
 			else
 				break
 			fi
@@ -1417,15 +1349,13 @@ ejecucion(){
 			fi
 		fi
 
+		imprimirTabla $P_NOMBRE $P_TAMANIO $P_PRIORIDAD $P_ESTADO $P_TRESTANTE
 		ejecutarUnCiloDeCPU
-		haHabidoUnCambio=1
-		if [[ $haHabidoUnCambio -eq 1 ]]; then
-			imprimirTabla $P_NOMBRE $P_TAMANIO $P_PRIORIDAD $P_ESTADO $P_TRESTANTE
-			dibujarMemoria
-			dibujarEstadoCPU
-			echo "Número de procesos ejecutados $procEjecutados"
-			breakpoint "Fin del loop $tiempoEjecucion del WHILE"
-		fi
+		dibujarMemoria
+		dibujarEstadoCPU
+		echo "Número de procesos ejecutados $procEjecutados"
+		breakpoint "Fin del loop $tiempoEjecucion del WHILE"
+		
 	done
 
 	rm temp > /dev/null
@@ -1446,47 +1376,41 @@ ejecucion(){
 
 
 #main
-main(){
-	cargaDatos $opcionYN
-	escribeDatos
-	ordenarProcesos
-	asignarColoresTabla
-	inicializarArrays
-	clear
-	imprimirTabla 1 2 3 4 5
-	informeTabla 1 2 3 4 5
+cargaDatos $opcionYN
+escribeDatos
+ordenarProcesos
+coloresRand
+inicializarArrays
+clear
+imprimirTabla 1 2 3 4 5
+informeTabla 1 2 3 4 5
 
 
-	echo -e "
-	╔═══════════════════════════════════════╗
-	║					║
-	║${L_GREEN} Tamaño Partición: ${NC}${B_BLUE}$tamPart${NC}			║
-	║${L_GREEN} Número de Particiones: ${NC}${B_BLUE}$numeroParticiones${NC}		║
-	║${L_GREEN} Número de Procesos: ${NC}${B_BLUE}$numProc ${NC}		║
-	║${L_GREEN} Prioridad Mínima: ${NC}${B_BLUE}$priorMin${NC}			║
-	║${L_GREEN} Prioridad Máxima: ${NC}${B_BLUE}$priorMax${NC}			║
-	║					║
-	╚═══════════════════════════════════════╝"
-	escribirInforme "
-	╔═══════════════════════════════════════╗
-	║					║
-	║ Tamaño Partición: $tamPart			║
-	║ Número de Particiones: $numeroParticiones		║
-	║ Número de Procesos: $numProc 		║
-	║ Prioridad Mínima: $priorMin			║
-	║ Prioridad Máxima: $priorMax			║
-	║					║
-	╚═══════════════════════════════════════╝"
-	imprimirLCyan "Pulsa enter para continuar" -n
-	read -s
-	ejecucion 
+echo -e "
+╔═══════════════════════════════════════╗
+║					║
+║${L_GREEN} Tamaño Partición: ${NC}${B_BLUE}$tamPart${NC}			║
+║${L_GREEN} Número de Particiones: ${NC}${B_BLUE}$numeroParticiones${NC}		║
+║${L_GREEN} Número de Procesos: ${NC}${B_BLUE}$numProc ${NC}		║
+║${L_GREEN} Prioridad Mínima: ${NC}${B_BLUE}$priorMin${NC}			║
+║${L_GREEN} Prioridad Máxima: ${NC}${B_BLUE}$priorMax${NC}			║
+║					║
+╚═══════════════════════════════════════╝"
+escribirInforme "
+╔═══════════════════════════════════════╗
+║					║
+║ Tamaño Partición: $tamPart			║
+║ Número de Particiones: $numeroParticiones		║
+║ Número de Procesos: $numProc 		║
+║ Prioridad Mínima: $priorMin			║
+║ Prioridad Máxima: $priorMax			║
+║					║
+╚═══════════════════════════════════════╝"
+imprimirLCyan "Pulsa enter para continuar" -n
+read -s
+ejecucion | tee -a informeDebug.txt
 
-
-}
-
-main | tee -a informeDebug.txt
-
-convertirFicheroColorEnBlancoNegro "informeDebug.txt" "informeDebugBN.txt" "false"
+convertirFicheroColorEnBlancoNegro "informeDebug.txt" "informeDebugBN.txt" "true"
 scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
 if [ "$abrirInforme" = "s" ]; then
 	less -R informePrioridadMenor.txt
