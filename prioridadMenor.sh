@@ -950,40 +950,40 @@ aniadirProcesoAMemoria(){
 	local posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar
 	
 	#Si el param1 está vacío, no hacemos nada.
-	if [[ $1 = "" ]] || [[ $tamCola -le 0 ]];then
+	if [[ $1 = "" ]] || [[ $tamCola -le 0 ]] || [[ ${procesos[$1,$P_TAMANIO]} -gt $memoriaLibre ]];then
 		return
 	fi
 
-	if [[ ${procesos[$1,$P_TAMANIO]} -le $memoriaLibre ]]; then
-		procesos[$1,$P_ESTADO]=$STAT_MEMO
+	#Actualizamos el estado del proceso
+	procesos[$1,$P_ESTADO]=$STAT_MEMO
 
-		eliminarCola #sacamos al primer proceso de la cola (el que acabamos de introducir)
-		
-		ajustarMemoriaParaElProceso "${procesos[$1,$P_TAMANIO]}" "posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar"
-		
-		if [[ $posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar == "null"  ]] || [[ $posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar == "" ]];then
-			breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), el return de ajustarMemoriaParaElProceso() no es posible ($posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar) || PROGRAMACIÓN DEFENSIVA"
-			imprimirErrorCritico "Lo de arriba, mostrando estado de memoria para diagnóstico:"
-			dibujarMemoria
-			breakpoint "El error ha sido impreso."
-		fi
-		
-		local -i ultimaPosicionADibujarElProceso=$((posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar  + ${procesos[$1,$P_TAMANIO]}))
-
-		for((i=posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar; i<ultimaPosicionADibujarElProceso; i++)); do
-				#añadimos el indice
-			memoriaSegunNecesidades[$i,$MEM_INDICE]=$1
-				#Añadimos la salida por pantalla con COLOR 
-			memoriaSegunNecesidades[$i,$MEM_TOSTRING]="${procesos[$1,${P_COLOR}]}$MEM_STRING_HUECOSINCOLOR${NC}"
-
-			if [[ $i -gt $tamMemoria  ]];then
-				breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), has añadido a más memoria de la existente || PROGRAMACIÓN DEFENSIVA"
-				salirPorErrorCritico "Lo de arriba"
-			fi
-		done
-
-		memoriaLibre=$((memoriaLibre - ${procesos[$1,$P_TAMANIO]}))
+	eliminarCola #sacamos al primer proceso de la cola (el que acabamos de introducir)
+	
+	ajustarMemoriaParaElProceso "${procesos[$1,$P_TAMANIO]}" "posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar"
+	
+	if [[ $posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar == "null"  ]] || [[ $posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar == "" ]];then
+		breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), el return de ajustarMemoriaParaElProceso() no es posible ($posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar) || PROGRAMACIÓN DEFENSIVA"
+		imprimirErrorCritico "Lo de arriba, mostrando estado de memoria para diagnóstico:"
+		dibujarMemoria
+		breakpoint "El error ha sido impreso."
 	fi
+	
+	local -i ultimaPosicionADibujarElProceso=$((posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar + ${procesos[$1,$P_TAMANIO]}))
+
+	for((i=posicionEnLaQueEmpiezaElHuecoEnMemoriaParaEmplazar; i<ultimaPosicionADibujarElProceso; i++)); do
+			#añadimos el indice
+		memoriaSegunNecesidades[$i,$MEM_INDICE]=$1
+			#Añadimos la salida por pantalla con COLOR 
+		memoriaSegunNecesidades[$i,$MEM_TOSTRING]="${procesos[$1,${P_COLOR}]}$MEM_STRING_HUECOSINCOLOR${NC}"
+
+		if [[ $i -gt $tamMemoria  ]];then
+			breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), has añadido a más memoria de la existente || PROGRAMACIÓN DEFENSIVA"
+			salirPorErrorCritico "Lo de arriba"
+		fi
+	done
+
+	memoriaLibre=$((memoriaLibre - ${procesos[$1,$P_TAMANIO]}))
+	
 	
 }
 
@@ -1300,7 +1300,7 @@ ejecucion(){
 	local tRetornoAcumulado=0
 	local -i i
 	local -i aux #auxiliar que indica la particion que se ha introducido un proceso
-	local -i cambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
+	local -i haHabidoUnCambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
 	
 	procesoCPU=0 
 	#Empieza la ejecucion del programa
@@ -1310,6 +1310,8 @@ ejecucion(){
 
 	while [[ $procEjecutados -lt $numProc ]]; do # mientras el numero de procesos ejecutados sea menor a procesos total
 		clear
+		haHabidoUnCambio=0
+
 
 		echo "Tiempo de ejecución: $tiempoEjecucion"
 		echo "Prioridad más alta: $priorMax"
