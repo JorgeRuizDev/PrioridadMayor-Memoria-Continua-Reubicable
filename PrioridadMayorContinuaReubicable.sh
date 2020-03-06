@@ -877,7 +877,9 @@ imprimirTablaOld(){
 #	con todos los parámtros, puede ser muy pesado.
 #	He decidido hacer esto por dos razones: 1º: Puedo reutilizar la tabla en la entrada de datos con 4 columnas 2º: Puedo poner la cabecera fija cómodamente.
 imprimirTablaPredeterminada(){
-
+	echo ""
+	echo "    │ D.INICIAL.│    TIEMPO    │   MEMO  │    OTROS DATOS   │"
+	echo "┌───┼───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤"
 	imprimirTabla "$P_NOMBRE" "$P_TLLEGADA" "$P_TEJECUCION" "$P_TAMANIO" "$P_TESPERA" "$P_TRETORNO" "$P_TRESTANTE" "$P_POSINI" "$P_POSFIN" "$P_ESTADO"
 
 }
@@ -908,7 +910,7 @@ imprimirTabla(){
 			echo -e "──${NC}" 
 		fi
 		for j in "$@";do #imprime los datos de los procesos
-			printf " ${procesos[$j,$P_COLORLETRA]}%-*s${NC}" "${anchosTabla[$j]}" "${procesos[$i,$j]:0:${anchosTabla[$j]}}"
+			printf " ${procesos[$i,$P_COLORLETRA]}%-*s${NC}" "${anchosTabla[$j]}" "${procesos[$i,$j]:0:${anchosTabla[$j]}}"
 		done
 		echo -e ""
 
@@ -1015,10 +1017,11 @@ calcularPosTodosProcesos(){
 # Nombre: eliminarPosProceso
 # Date: 05/03/2020
 # Descripción:  Actualiza las variables $P_POSINI y $P_POSFIN del proceso indicado a "-"
+# @Param $1: índice del proces cuyas posiciones queremos eliminar.
 eliminarPosProceso(){
 	local -r valorNull="-"
-	procesos[$i,$P_POSINI]=$valorNull
-	procesos[$i,$P_POSFIN]=$valorNull
+	procesos[$1,$P_POSINI]=$valorNull
+	procesos[$1,$P_POSFIN]=$valorNull
 }
 
 # Nombre: nularColumna
@@ -1031,8 +1034,14 @@ nularColumna(){
 	local -i columna
 
 	for columna in "$@"; do
-		for ((i=0; i<numProc; i++));do
-			procesos[$i,$columna]=$valorNull
+		for ((i=1; i<=numProc; i++));do
+
+			if [[ $columna -eq $P_ESTADO ]];then
+				procesos[$i,$columna]=$STAT_SISTEMA
+			else
+				procesos[$i,$columna]=$valorNull
+			fi
+
 		done
 	done
 
@@ -1335,13 +1344,11 @@ dibujarMemoria(){
 	local memoriaEnUsoPorcieto #Es un string al ser float
 
 	memoriaEnUso=$((tamMemoria-memoriaLibre))
-	memoriaEnUsoPorciento=$(echo "scale=2;100*$memoriaEnUso/$tamMemoria" | bc -l)
+	memoriaEnUsoPorciento=$(echo "scale=2;100*$memoriaEnUso/$tamMemoria" | bc -l) #FIXME: A veces se pone a 0% uando debería ser mayor
 
-	#FIXME es muy cutre/temporal
-	#TODO: Pregunta: Cómo dibujar la memoria?
-	imprimirLCyan "Uso de memoria: $memoriaEnUso/$tamMemoria ($memoriaEnUsoPorciento%)"
+
+	imprimirLCyan "Uso de memoria: $memoriaEnUso/$tamMemoria ($memoriaEnUsoPorciento%) -> Memoria libre: $memoriaLibre"
 	echo "Tamaño memoria: $tamMemoria | Memoria libre: $memoriaLibre"
-	echo "memoria:"
 
 	for((i=1;i<=tamMemoria;i++)); do
 		echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
@@ -1355,7 +1362,7 @@ dibujarMemoria(){
 }
 
 # Nombre: aniadirSiguienteProcesoACPU
-# Date: 27/01/2020
+# Date: 27/02/2020
 # Descripción: De entre todos los procesos en memoria, añade el proces con la prioridad más alta a CPU
 aniadirSiguienteProcesoACPU(){
 	#Si la prioridad menor es más baja que la mayor
@@ -1405,7 +1412,7 @@ aniadirSiguienteProcesoACPU(){
 }
 
 # Nombre: ejecutarUnCicloDeCPU
-# Date: 27/01/2020
+# Date: 27/02/2020
 # Descripción: Simula el comportamiento repetitivo de algunos momentos del programa
 #	-Calcula ciertos valores
 #	-Aumenta el tiempo de ejecución
@@ -1421,16 +1428,20 @@ ejecutarUnCiloDeCPU(){
 	((tiempoEjecucion++))
 }
 
+# Nombre: comprobarSiElProcesoEnCPUHaTerminado
+# Date: 29/02/2020
+# Descripción: Si un proceso ha termiando en CPU -> Actualiza su línea en la tabla y lo saca de CPU y memoria
 comprobarSiElProcesoEnCPUHaTerminado(){
 
-	if [[ ${procesos[$procesoCPU,$P_TRESTANTE]} -eq 0 ]];then >> /dev/null
+	if [[ ${procesos[$procesoCPU,$P_TRESTANTE]} -eq 0 ]];then 
 		imprimirLCyan "El proceso ${procesos[$procesoCPU,$P_NOMBRE]} ha terminado de ejecutarse en el instante $tiempoEjecucion"
 		((procEjecutados++))
 		#TODO: "Actualizar los tiempos"
 		#TODO: "Marcar cambio"
 		#Eliminamos el proceso de la CPU
 		
-		eliminarProcesoDeMemoria $procesoCPU
+		eliminarPosProceso "$procesoCPU"
+		eliminarProcesoDeMemoria "$procesoCPU"
 		procesos[$procesoCPU,$P_ESTADO]=$STAT_FIN
 		procesoCPU=0
 	fi
@@ -1476,6 +1487,8 @@ ejecucion(){
 		echo "Prioridad más alta: $priorMax"
 		echo "Prioridad más baja: $priorMin" 
 
+
+		calcularPosTodosProcesos
 		comprobarSiElProcesoEnCPUHaTerminado
 
 		#Si se ha ejecutado el último proceso, paramos el bucle para no tener ejecuciones en blanco
@@ -1498,8 +1511,7 @@ ejecucion(){
 			if [[ ${procesos[${cola[1]},$P_TAMANIO]} -le $memoriaLibre ]]; then
 				aniadirProcesoAMemoria "${cola[1]}"
 				imprimirLCyan "El proceso  ${procesos[${cola[1]},$P_NOMBRE]} ha sido introducido en memoria."
-				imprimirLCyan "Uso de memoria tras la introducción: $(($tamMemoria-$memoriaLibre))/$tamMemoria ($(( ($tamMemoria-$memoriaLibre)/$tamMemoria*100))%)"
-				
+								
 				haHabidoUnCambio=1
 			else
 				break
@@ -1552,7 +1564,7 @@ main(){
 	ordenarProcesos
 	asignarColoresTabla
 	inicializarArrays
-	nularColumna "$P_TRETORNO" "$P_POSINI" "$P_POSFIN"
+	nularColumna "$P_TRETORNO" "$P_POSINI" "$P_POSFIN" "$P_ESTADO"
 	clear
 	imprimirTabla 1 2 3 4 5
 	
