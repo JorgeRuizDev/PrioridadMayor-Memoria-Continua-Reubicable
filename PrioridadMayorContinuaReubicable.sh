@@ -1032,6 +1032,7 @@ ajustarMemoriaParaElProceso(){
 	eval $2="$posicionEnLaQueEmpiezaElHuecoEnMemoria"
 }
 
+
 # Nombre: encontrarHuecoEnMemoria
 # Descripción: Función que calcula la posición / si es posible introducir $1 unidades de memoria continuas en memoria. 
 # Date 22/02/2020
