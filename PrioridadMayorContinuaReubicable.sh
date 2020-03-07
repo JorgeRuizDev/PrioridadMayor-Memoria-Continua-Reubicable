@@ -165,8 +165,8 @@ declare -r MEM_TOSTRING=1
 	#Declares de los contenidos por defecto de la MEMORIA
 declare -r MEM_HUECO_VACIO="null"
 	#Valores que se imprimen por pantalla
-declare -r MEM_STRING_HUECO_VACIO="$_WHITE   ${_DEFAULT}"
-declare -r MEM_STRING_HUECOSINCOLOR="   "	#Se colorea con el color del proceso
+declare -r MEM_STRING_HUECO_VACIO="$_WHITE${WHITE}XXX${_DEFAULT}"
+declare -r MEM_STRING_HUECOSINCOLOR="___"	#Se colorea con el color del proceso
 
 #	######################################
 #	Declares 2020:
@@ -761,12 +761,13 @@ comprobarDatosFichero(){
 # número de procesos, etc con números aleatorios llamando a la función numAleatorio
 datosAleatorios(){
 	local -i i
-	
+	local -i tamMaxProc
 	numAleatorio tamMemoria 5 35
 	numAleatorio numProc 5 13
 	numAleatorio priorMin -30 30
 	numAleatorio priorMax -30 30
 	establecerPrioridad
+
 	for ((i=1; i<=numProc; i++)) do
 		if [[ $i -lt 10 ]]; then 			#Nombres que siempre ocupen 3 chars (p01 - p99)
 			procesos[$i,$P_NOMBRE]="P0$i"
@@ -776,7 +777,7 @@ datosAleatorios(){
 		numAleatorio procesos[$i,$P_TLLEGADA] 0 15 #numero aleatorio de t.llegada entre 0 y 15
 		numAleatorio procesos[$i,$P_TEJECUCION] 1 10 #numero aleatorio de t.ejec entre 0 y 10		
 		numAleatorio procesos[$i,$P_PRIORIDAD] $priorMin $priorMax #numero aleatorio de prioridad entre prioriMin y priorMax
-		numAleatorio procesos[$i,$P_TAMANIO] 1 $tamMemoria #numero aleatorio de tamaño entre 1 y tamMemoria
+		numAleatorio procesos[$i,$P_TAMANIO] 1 $((tamMemoria * 75 / 100)) #numero aleatorio de tamaño entre 1 y tamMemoria + 0.75
 	done
 	asignarColoresTabla
 }
@@ -967,7 +968,7 @@ calcularPosTodosProcesos(){
 
 	for (( i=1; i<=tamMemoria; i++)); do
 		procesoActual=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
-		if [[ $procesoActual -ne $ultimoProEncontrado ]]; then #Está en memoria
+		if [[ $procesoActual -ne $ultimoProEncontrado ]] && [[ $procesoActual != "$MEM_HUECO_VACIO" ]]; then #Está en memoria
 			ultimoProEncontrado=$procesoActual
 			procesos[$procesoActual,$P_POSINI]=$i
 			procesos[$procesoActual,$P_POSFIN]=$((i+${procesos[$procesoActual,$P_TAMANIO]}))
@@ -1103,8 +1104,10 @@ ajustarMemoriaParaElProceso(){
 	encontrarHuecoEnMemoria "$1" posicionEnLaQueEmpiezaElHuecoEnMemoria
 	
 	if (( posicionEnLaQueEmpiezaElHuecoEnMemoria == "null")); then
-		imprimirAviso "Agárrate amigo! La memoria está siendo reubicada!"
+		dibujarMemoria	#Dibujamos la memoria una vez para ver la diferencia.
 		reubicarProcesos
+		imprimirAviso "La memoria ha sido reubicada"
+		dibujarMemoria	#Dibujamos la memoria para ver el después
 		encontrarHuecoEnMemoria "$1" posicionEnLaQueEmpiezaElHuecoEnMemoria
 	fi
 	
@@ -1204,6 +1207,7 @@ reubicarProcesos(){
 	done
 	
 }
+
 # Nombre: DEV_modificarMemoria
 # Date: 27/01/2020
 # Descripción: Función que permite manipular la memoria de forma manual. Diseñada para testear el comportamiento de esta. 
@@ -1311,17 +1315,17 @@ dibujarMemoria(){
 
 	imprimirLCyan "Uso de memoria: $memoriaEnUso/$tamMemoria ($memoriaEnUsoPorciento%) -> Memoria libre: $memoriaLibre"
 
-
-	for((i=1;i<=tamMemoria;i++)); do
-		#echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
-		echo -n ""	#FIXME: Borrar cuando haya que entregar
-	done
-	echo "" #salto de línea
+	if [[ $DEBUG_ENABLE == true ]]; then #Imprime los índices de memoria para mejorar visualización
+		for((i=1;i<=tamMemoria;i++)); do
+			echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
+			echo -n ""
+		done
+		echo "" #salto de línea
+	fi
 	for((i=1;i<=tamMemoria;i++)); do
 		echo -ne "${memoriaSegunNecesidades[$i,$MEM_TOSTRING]}"
 	done
 	echo ""
-
 }
 
 # Nombre: aniadirSiguienteProcesoACPU
@@ -1392,11 +1396,6 @@ ejecutarUnCiloDeCPU(){
 		fi
 	done
 
-	#tEjecAcumulado=$(( $tEjecAcumulado + ${procesos[$procesoCPU,3]}))
-	#tEsperaAcumulado=$(( $tEsperaAcumulado + ${procesos[$procesoCPU,7]}))
-	#tRetornoAcumulado=$(( $tRetornoAcumulado + ${procesos[$procesoCPU,8]}))
-
-
 	((tiempoEjecucion++))
 }
 
@@ -1415,10 +1414,9 @@ comprobarSiElProcesoEnCPUHaTerminado(){
 		eliminarPosProceso "$procesoCPU"
 		eliminarProcesoDeMemoria "$procesoCPU"
 		procesos[$procesoCPU,$P_ESTADO]=$STAT_FIN
-		procesos[$procesoCPU,$P_TRETORNO]=$tiempoEjecucion
 		procesoCPU=0
 	fi
-
+	procesos[$procesoCPU,$P_TRETORNO]=$tiempoEjecucion
 }
 
 dibujarEstadoCPU(){
@@ -1432,31 +1430,26 @@ dibujarEstadoCPU(){
 	echo ""
 }
 
+# Nombre: ejecucion
+# Descripción: Loop central con la ejecución de los procesos
 ejecucion(){
 	local -i procEjecutados=0
 	local -i tiempoEjecucion=0
 	local -i i
-	local -i haHabidoUnCambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
+	local -i haHabidoUnCambio #bool que se usa para ver cuando ha ocurrido un evento. Los eventos suelen imprimir STRINGS especiales!
 	local tEjecAcumulado=0
 	local tEsperaAcumulado=0
 	local tRetornoAcumulado=0
-	procesoCPU=0 
+	procesoCPU=0	#int que almacena la fila correspondiente al proceso que está en ejecución 
 	#Empieza la ejecucion del programa
 	memoriaLibre=$tamMemoria
 	vaciarMemoria
 	
 
 	while [[ $procEjecutados -lt $numProc ]]; do # mientras el numero de procesos ejecutados sea menor a procesos total
-		clear
-
+		
 		haHabidoUnCambio=0
 
-		echo "Tiempo de ejecución: $tiempoEjecucion"
-		echo "Prioridad más alta: $priorMax"
-		echo "Prioridad más baja: $priorMin" 
-
-
-		calcularPosTodosProcesos
 		comprobarSiElProcesoEnCPUHaTerminado
 
 		#Si se ha ejecutado el último proceso, paramos el bucle para no tener ejecuciones en blanco
@@ -1464,7 +1457,7 @@ ejecucion(){
 			imprimirLCyan "El último proceso ha sido desalojado con éxito de CPU y Memoria!"
 			break
 		fi
-
+	
 		#Introducimos a la cola los procesos que han llegado a memoria
 		for((i=1;i<=numProc;i++)) do
 			if [[ ${procesos[$i,$P_TLLEGADA]} -eq "$tiempoEjecucion" ]]; then
@@ -1494,9 +1487,15 @@ ejecucion(){
 		fi
 
 		ejecutarUnCiloDeCPU
+		calcularPosTodosProcesos
 
 		#Si ha habido un cambio/evento en el estado de algún proceso -> Salida por pantalla
 		if [[ $haHabidoUnCambio -eq 1 ]]; then
+			clear
+			echo "Tiempo de ejecución: $tiempoEjecucion"
+			echo "Prioridad más alta: $priorMax"
+			echo "Prioridad más baja: $priorMin" 
+
 			imprimirTablaPredeterminada
 			dibujarMemoria
 			dibujarEstadoCPU
@@ -1507,6 +1506,13 @@ ejecucion(){
 	done
 
 	pantallaFinal(){
+		local -i
+		for ((i=1; i<=numProc; i++));do
+			tEjecAcumulado=$(( tEjecAcumulado + ${procesos[$i,3]}))
+			tEsperaAcumulado=$(( tEsperaAcumulado + ${procesos[$i,7]}))
+			tRetornoAcumulado=$(( tRetornoAcumulado + ${procesos[$i,8]}))
+		done
+
 		tEjecMedio=$(echo "scale=2;$tEjecAcumulado/$procEjecutados" | bc -l)
 		tEsperaMedio=$(echo "scale=2;$tEsperaAcumulado/$procEjecutados" | bc -l)
 		tRetornoMedio=$(echo "scale=2;$tRetornoAcumulado/$procEjecutados" | bc -l)
@@ -1523,6 +1529,7 @@ ejecucion(){
 		dibujarMemoria
 		dibujarEstadoCPU
 	}
+	pantallaFinal
 }
 
 
@@ -1562,22 +1569,12 @@ scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
 if [ "$abrirInforme" = "s" ]; then
 	less -R informeDebug.txt
 fi
-#FIXME:	Las direcciones de los procesos no van
-#FIXME: Los valores medios creo que tampoco
-
+#FIXME:	Las direcciones empiezan en 1 y termiann en tamMemo, y no en 0 y tamMemo -1
 
 
 #Cosas que no funcionan #FIXME/TODO:
-#	Entrada por fichero: hay que quitar la entrada con particiones y meter el tamaño memoria
-#	guardar en fichero
-#	Cálculos de datos medios
-#	Colorines
-#	Tiempo de retorno y esas vainas
 #	Líneas de tiempo y CPU en condiciones
 #	Informes en condiciones
-#	Si dos prioridades son iguales, el proceso que entra en CPU es el que esté más a la izqda en la memoria
-#	Comprobar la entrada aleatoria el funcionamiento de memoria
-#	Más colorines
 #	Hacer la líena de cpu y memoria que puedan ser visibles si no hay colores
 #	Pausar la ejecución sólo cuando ocurra algún cambio
 #	Más colorines
