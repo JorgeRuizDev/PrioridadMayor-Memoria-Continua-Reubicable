@@ -1,5 +1,6 @@
 #!/bin/bash
 
+global(){
 
 clear
 echo "$(date '+%d/%m/%Y %H:%M:%S')" | tee informeDebug.txt
@@ -225,16 +226,13 @@ declare    DEBUG_FIRST_EXECUTION=true
 declare -r DEBUG_PERSISTENT_FILE=false
 
 
+main | tee -a informeDebug.txt #Por la naturaleza de bash, si llamamos desde una función a otra, las variables de la primera función son accesibles desde la segunda
+#Si llamamos a main desde global, podemos tener el GLOBAL como una función, y mantener sus funciones como globales
+}
 
 #TODO generales:
 #	-Verificación de que el script se está ejecutando desde ./script.sh ó script.sh, y que no hay más carpetas antes.
 #	
-#
-
-
-#FIXME: Bugs conocidos 28/02/2020
-# Hay veces en las que se mete en memoria un proceso que no cabe
-# Hay veces en las que el proceso no sale de CPU, aún con tiempo restante negativo
 
 
 # Nombre: escribirInforme
@@ -881,7 +879,7 @@ imprimirTablaPredeterminada(){
 	echo "    │ D.INICIAL.│    TIEMPO    │   MEMO  │    OTROS DATOS   │"
 	echo "┌───┼───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤"
 	imprimirTabla "$P_NOMBRE" "$P_TLLEGADA" "$P_TEJECUCION" "$P_TAMANIO" "$P_TESPERA" "$P_TRETORNO" "$P_TRESTANTE" "$P_POSINI" "$P_POSFIN" "$P_ESTADO"
-
+	echo "└───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘"
 }
 
 
@@ -903,7 +901,7 @@ imprimirTabla(){
 	echo ""
 
 	for (( i=1; i<=numProc; i++ )) do 
-		if [ $((($i-1) % 5 )) -eq 0 ]; then #imprime una línea de separación cada 5 procesos
+		if [[ $((($i-1) % 5 )) -eq 0 ]] && [[ $i -ne 1 ]]; then #imprime una línea de separación cada 5 procesos (pero no en la primera ejecución)
 			for k in "$@"; do
 				printf "${BLUE}%s"  ${separadorHorizontal:0:${anchosTabla[$k]}+1}
 			done
@@ -1348,10 +1346,11 @@ dibujarMemoria(){
 
 
 	imprimirLCyan "Uso de memoria: $memoriaEnUso/$tamMemoria ($memoriaEnUsoPorciento%) -> Memoria libre: $memoriaLibre"
-	echo "Tamaño memoria: $tamMemoria | Memoria libre: $memoriaLibre"
+
 
 	for((i=1;i<=tamMemoria;i++)); do
-		echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
+		#echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
+		echo -n ""	#FIXME: Borrar cuando haya que entregar
 	done
 	echo "" #salto de línea
 	for((i=1;i<=tamMemoria;i++)); do
@@ -1433,8 +1432,9 @@ ejecutarUnCiloDeCPU(){
 # Descripción: Si un proceso ha termiando en CPU -> Actualiza su línea en la tabla y lo saca de CPU y memoria
 comprobarSiElProcesoEnCPUHaTerminado(){
 
-	if [[ ${procesos[$procesoCPU,$P_TRESTANTE]} -eq 0 ]];then 
-		imprimirLCyan "El proceso ${procesos[$procesoCPU,$P_NOMBRE]} ha terminado de ejecutarse en el instante $tiempoEjecucion"
+	if [[ ${procesos[$procesoCPU,$P_TRESTANTE]} -eq 0 ]];then
+		printf "${L_RED}%s ${procesos[$procesoCPU,$P_COLORLETRA]}%s ${L_RED}%s ${NC}%d ${L_RED}%s\n${NC}" "El proceso" "${procesos[$procesoCPU,$P_NOMBRE]}" "ha terminado de ejecutarse en el instante" $tiempoEjecucion "y está siendo desalojado de memoria y CPU"
+		
 		((procEjecutados++))
 		#TODO: "Actualizar los tiempos"
 		#TODO: "Marcar cambio"
@@ -1469,7 +1469,6 @@ ejecucion(){
 	local tEsperaAcumulado=0
 	local tRetornoAcumulado=0
 	local -i i
-	local -i aux #auxiliar que indica la particion que se ha introducido un proceso
 	local -i haHabidoUnCambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
 	
 	procesoCPU=0 
@@ -1501,7 +1500,7 @@ ejecucion(){
 		for((i=1;i<=numProc;i++)) do
 			if [[ ${procesos[$i,$P_TLLEGADA]} -eq "$tiempoEjecucion" ]]; then
 				anadirCola $i
-				imprimirLCyan "El proceso ${proccesos[$i,$P_NOMBRE]} ha entrado en el sistema en el instante $tiempoEjecucion"
+				printf "${L_MAGENTA}%s ${procesos[$i,$P_COLORLETRA]}%s ${L_MAGENTA}%s ${NC}%d\n" "El proceso" "${procesos[$i,$P_NOMBRE]}" "ha entrado en el sistema en el instante" "$tiempoEjecucion"
 				haHabidoUnCambio=1
 			fi
 		done
@@ -1509,9 +1508,8 @@ ejecucion(){
 		#Volcamos toda la cola en memoria (si cabe)
 		while (( tamCola >= 1 )); do
 			if [[ ${procesos[${cola[1]},$P_TAMANIO]} -le $memoriaLibre ]]; then
+				printf "${L_GREEN}%s ${procesos[${cola[1]},$P_COLORLETRA]}%s ${L_GREEN}%s ${NC}%d\n" "El proceso" "${procesos[${cola[1]},$P_NOMBRE]}"  "ha sido introducido en memoria en el instante" "$tiempoEjecucion"	
 				aniadirProcesoAMemoria "${cola[1]}"
-				imprimirLCyan "El proceso  ${procesos[${cola[1]},$P_NOMBRE]} ha sido introducido en memoria."
-								
 				haHabidoUnCambio=1
 			else
 				break
@@ -1519,23 +1517,22 @@ ejecucion(){
 		done
 		
 		#Comprobaciones de CPU
-		#Si no hay ningún proceso en CPU, o el proceso está terminado
-		if [[ $procesoCPU -eq 0 ]]; then
-			#Si hay algún proceso en memoria
-			if [[ $memoriaLibre -lt $tamMemoria ]]; then
-				aniadirSiguienteProcesoACPU
-				#TODO: Marcar aquí cambio
-			fi
+		#Si no hay ningún proceso en CPU, o el proceso está terminado && hay al menos 1 proc en mem.
+		if [[ $procesoCPU -eq 0 ]] && [[ $memoriaLibre -lt $tamMemoria ]]; then
+			aniadirSiguienteProcesoACPU
+			printf "${L_CYAN}%s ${procesos[$procesoCPU,$P_COLORLETRA]}%s ${L_CYAN}%s${NC} %d ${L_CYAN}%s\n${NC}" "El proceso" "${procesos[$procesoCPU,$P_NOMBRE]}" "ha sido introducido en la CPU en el instante" "$tiempoEjecucion" "y ahora se está ejecutando"
+			haHabidoUnCambio=1
 		fi
 
 		ejecutarUnCiloDeCPU
-		#DEV_modificarMemoria
-		haHabidoUnCambio=1
+
+		#Si ha habido un cambio en el estado de algún proceso.
 		if [[ $haHabidoUnCambio -eq 1 ]]; then
 			imprimirTablaPredeterminada
 			dibujarMemoria
 			dibujarEstadoCPU
-			echo "Número de procesos ejecutados $procEjecutados"
+			imprimirLCyan "Número de procesos ejecutados $procEjecutados/$numProc"
+
 			breakpoint "Fin del loop $tiempoEjecucion del WHILE"
 		fi
 	done
@@ -1543,16 +1540,14 @@ ejecucion(){
 	rm temp > /dev/null
 	clear
 	imprimirTablaPredeterminada
-	
+	echo "════════════════════════════════════════════════════════════════════════════"
 	echo "Tiempo de ejecución Total: $tiempoEjecucion"
 	echo "Prioridad más alta: $priorMax"
 	echo "Prioridad más baja: $priorMin"
 	imprimirLCyan "Tiempo de ejecución medio: $BOLD$tEjecMedio"
 	imprimirLCyan "Tiempo de espera medio: $BOLD$tEsperaMedio"
 	imprimirLCyan "Tiempo de retorno medio: $BOLD$tRetornoMedio"
-	escribirInforme "Tiempo de ejecución medio: $tEjecMedio"
-	escribirInforme "Tiempo de espera medio: $tEsperaMedio"
-	escribirInforme "Tiempo de retorno medio: $tRetornoMedio"
+	dibujarMemoria
 	dibujarEstadoCPU
 }
 
@@ -1598,12 +1593,12 @@ main(){
 
 }
 
-main | tee -a informeDebug.txt
 
+global 
 convertirFicheroColorEnBlancoNegro "informeDebug.txt" "informeDebugBN.txt" "false"
 scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
 if [ "$abrirInforme" = "s" ]; then
-	less -R informePrioridadMenor.txt
+	less -R informeDebug.txt
 fi
 
 
