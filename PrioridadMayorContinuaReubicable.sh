@@ -2,51 +2,7 @@
 
 global(){
 
-clear
-echo "$(date '+%d/%m/%Y %H:%M:%S')" | tee informeDebug.txt
-echo -e "\e[0;36m			╔══════════════════════════════════════════════════════════╗\e[0m"
-echo -e "\e[0;36m			║\e[0m                     Creative Commons                     \e[0;36m║\e[0m"
-echo -e "\e[0;36m			║\e[0m                                                          \e[0;36m║\e[0m"
-echo -e "\e[0;36m			║\e[0m                   BY - Atribución (BY)                   \e[0;36m║\e[0m"
-echo -e "\e[0;36m			║\e[0m                 NC - No uso Comercial (NC)               \e[0;36m║\e[0m"
-echo -e "\e[0;36m			║\e[0m                 SA - Compartir Igual (SA)                \e[0;36m║\e[0m"
-echo -e "\e[0;36m			╚══════════════════════════════════════════════════════════╝\e[0m\n"
-
-echo "		╔══════════════════════════════════════════════════════════╗" > informePrioridadMenor.txt
-echo "		║                     Creative Commons                     ║" >> informePrioridadMenor.txt
-echo "		║                                                          ║" >> informePrioridadMenor.txt
-echo "		║                   BY - Atribución (BY)                   ║" >> informePrioridadMenor.txt
-echo "		║                 NC - No uso Comercial (NC)               ║" >> informePrioridadMenor.txt
-echo "		║                 SA - Compartir Igual (SA)                ║" >> informePrioridadMenor.txt
-echo "		╚══════════════════════════════════════════════════════════╝" >> informePrioridadMenor.txt
-#TODO: Poner mi nombre y el título completo a la práctica (SN C R)
-#TODO: Y metelo en una función
-echo -e "\e[0;36m		╔═══════════════════════════════════════════════════════════════════════════════╗\e[0m"
-echo -e "\e[0;36m		║\e[0m										\e[0;36m║\e[0m"
-echo -e "\e[0;36m		║\e[0m			     Algoritmo de Prioridad Menor			\e[0;36m║\e[0m"
-echo -e "\e[0;36m		║\e[0m				Base: Omar Santos Bernabé			\e[0;36m║\e[0m"
-echo -e "\e[0;36m		║\e[0m										\e[0;36m║\e[0m"
-echo -e "\e[0;36m		║\e[0m			  Alumnos: Xing Long Ji - Yi Peng Ji			\e[0;36m║\e[0m"
-echo -e "\e[0;36m		║\e[0m			    Asignatura: Sistemas Operativos			\e[0;36m║\e[0m"
-echo -e "\e[0;36m		║\e[0m				  Curso 2016-2017				\e[0;36m║\e[0m"
-echo -e "\e[0;36m		║\e[0m										\e[0;36m║\e[0m"
-echo -e "\e[0;36m		╚═══════════════════════════════════════════════════════════════════════════════╝\e[0m\n"
-echo "" >>informePrioridadMenor.txt
-
-echo "	╔═══════════════════════════════════════════════════════════════════════════════╗" >> informePrioridadMenor.txt
-echo "	║										║" >> informePrioridadMenor.txt
-echo "	║				Informe de Práctica				║" >> informePrioridadMenor.txt
-echo "	║			     Algoritmo de Prioridad Menor			║" >> informePrioridadMenor.txt
-echo "	║										║" >> informePrioridadMenor.txt
-echo "	║			  Alumnos: Xing Long Ji - Yi Peng Ji			║" >> informePrioridadMenor.txt
-echo "	║			    Asignatura: Sistemas Operativos			║" >> informePrioridadMenor.txt
-echo "	║				  Curso 2016-2017				║" >> informePrioridadMenor.txt
-echo "	║										║" >> informePrioridadMenor.txt
-echo "	╚═══════════════════════════════════════════════════════════════════════════════╝" >> informePrioridadMenor.txt
-echo "" >>informePrioridadMenor.txt
-
 #declaracion de variables
-
 
 #TODO: Borrar cosas inexistentes.
 declare opcionApropiativo
@@ -455,6 +411,37 @@ comprobarSN(){
 	fi
 } 
 
+mostrarPantallaInformacion(){
+	clear
+	echo "$(date '+%d/%m/%Y %H:%M:%S')" | tee informeDebug.txt
+	echo -e "\e[0;36m			╔══════════════════════════════════════════════════════════╗\e[0m"
+	echo -e "\e[0;36m			║\e[0m                     Creative Commons                     \e[0;36m║\e[0m"
+	echo -e "\e[0;36m			║\e[0m                                                          \e[0;36m║\e[0m"
+	echo -e "\e[0;36m			║\e[0m                   BY - Atribución (BY)                   \e[0;36m║\e[0m"
+	echo -e "\e[0;36m			║\e[0m                 NC - No uso Comercial (NC)               \e[0;36m║\e[0m"
+	echo -e "\e[0;36m			║\e[0m                 SA - Compartir Igual (SA)                \e[0;36m║\e[0m"
+	echo -e "\e[0;36m			╚══════════════════════════════════════════════════════════╝\e[0m\n"
+
+	echo -e "\e[0;36m		╔═══════════════════════════════════════════════════════════════════════════════╗\e[0m"
+	echo -e "\e[0;36m		║\e[0m                                                                               \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                         Algoritmo de Prioridad Mayor                          \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                Memoria Según Necesidades: Contínua y Reubicable               \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                                                                               \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m        Base: Omar Santos Bernabé (Pri. Men. - Part. Fijas e Iguales)          \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                                                                               \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                               Alumnos 2016-2017:                              \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                          Xing Long Ji - Yi Peng Ji                            \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                                                                               \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                                Alumno 2019-2020:                              \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                                Jorge Ruiz Gómez                               \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                                                                               \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                          Asignatura: Sistemas Operativos                      \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                                Curso 2019-2020                                \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		║\e[0m                                                                               \e[0;36m║\e[0m"
+	echo -e "\e[0;36m		╚═══════════════════════════════════════════════════════════════════════════════╝\e[0m\n"
+	echo "" >>informePrioridadMenor.txt
+}
+
 # Nombre cargaDatos
 # Descripcion: muestra las opciones de inicio del programa si los datos es por fichero, teclado o automáticos
 cargaDatos(){
@@ -785,7 +772,6 @@ datosAleatorios(){
 # Nombre: escribeDatos
 # Descripcion: sobrescribe los datos en datos.txt, si no existe lo crea
 escribeDatos(){
-	#FIXME: No está actualizado a la versión segun necesidades
 	local -i i
 	local -i j
 	echo "Tamaño Memoria:$tamMemoria" > datos.txt
@@ -1310,7 +1296,7 @@ dibujarMemoria(){
 	local memoriaEnUsoPorciento #Es un string al ser float
 
 	memoriaEnUso=$((tamMemoria-memoriaLibre))
-	memoriaEnUsoPorciento=$(echo "scale=2;100*$memoriaEnUso/$tamMemoria" | bc -l) #FIXME: A veces se pone a 0% uando debería ser mayor
+	memoriaEnUsoPorciento=$(echo "scale=2;100*$memoriaEnUso/$tamMemoria" | bc -l) 
 
 
 	imprimirLCyan "Uso de memoria: $memoriaEnUso/$tamMemoria ($memoriaEnUsoPorciento%) -> Memoria libre: $memoriaLibre"
@@ -1535,6 +1521,7 @@ ejecucion(){
 
 #main
 main(){
+	mostrarPantallaInformacion
 	cargaDatos
 	escribeDatos
 	ordenarProcesos
@@ -1575,11 +1562,3 @@ fi
 #Cosas que no funcionan #FIXME/TODO:
 #	Líneas de tiempo y CPU en condiciones
 #	Informes en condiciones
-#	Hacer la líena de cpu y memoria que puedan ser visibles si no hay colores
-#	Pausar la ejecución sólo cuando ocurra algún cambio
-#	Más colorines
-#	Tiempo de espera
-#	Tiempo de retorno
-#	Poner el % de uso de memoria
-#	Aún más colorines
-#	
