@@ -1421,8 +1421,17 @@ ejecutarUnCiloDeCPU(){
 	procesos[$procesoCPU,$P_TRESTANTE]=$(( ${procesos[$procesoCPU,$P_TRESTANTE]}-1))
 	lineaEstadoCPU+=("$procesoCPU")
 	
-	#TODO: Incrementar el tiempo de espera de los procesos en memoria
-	#TODO: Incrementar el tiempo de espera de los procesos en la cola
+	#aumenta el tiempo de espera de los procesoso en memoria y en cola
+	for((i=1;i<=numProc;i++)) do
+		if [[ ${procesos[$i,$P_ESTADO]} == "$STAT_MEMO" ]] || [[ ${procesos[$i,$P_ESTADO]} == "$STAT_COLA" ]] ; then
+			((procesos[$i,$P_TESPERA]++))
+		fi
+	done
+
+	#tEjecAcumulado=$(( $tEjecAcumulado + ${procesos[$procesoCPU,3]}))
+	#tEsperaAcumulado=$(( $tEsperaAcumulado + ${procesos[$procesoCPU,7]}))
+	#tRetornoAcumulado=$(( $tRetornoAcumulado + ${procesos[$procesoCPU,8]}))
+
 
 	((tiempoEjecucion++))
 }
@@ -1436,13 +1445,13 @@ comprobarSiElProcesoEnCPUHaTerminado(){
 		printf "${L_RED}%s ${procesos[$procesoCPU,$P_COLORLETRA]}%s ${L_RED}%s ${NC}%d ${L_RED}%s\n${NC}" "El proceso" "${procesos[$procesoCPU,$P_NOMBRE]}" "ha terminado de ejecutarse en el instante" $tiempoEjecucion "y está siendo desalojado de memoria y CPU"
 		
 		((procEjecutados++))
-		#TODO: "Actualizar los tiempos"
-		#TODO: "Marcar cambio"
+
 		#Eliminamos el proceso de la CPU
 		
 		eliminarPosProceso "$procesoCPU"
 		eliminarProcesoDeMemoria "$procesoCPU"
 		procesos[$procesoCPU,$P_ESTADO]=$STAT_FIN
+		procesos[$procesoCPU,$P_TRETORNO]=$tiempoEjecucion
 		procesoCPU=0
 	fi
 
@@ -1462,15 +1471,11 @@ dibujarEstadoCPU(){
 ejecucion(){
 	local -i procEjecutados=0
 	local -i tiempoEjecucion=0
-	local  tEjecMedio=0
-	local  tEsperaMedio=0
-	local  tRetornoMedio=0
+	local -i i
+	local -i haHabidoUnCambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
 	local tEjecAcumulado=0
 	local tEsperaAcumulado=0
 	local tRetornoAcumulado=0
-	local -i i
-	local -i haHabidoUnCambio #bool que se usa para ver cuando haya cambios en las particiones o cpu
-	
 	procesoCPU=0 
 	#Empieza la ejecucion del programa
 	memoriaLibre=$tamMemoria
@@ -1526,7 +1531,7 @@ ejecucion(){
 
 		ejecutarUnCiloDeCPU
 
-		#Si ha habido un cambio en el estado de algún proceso.
+		#Si ha habido un cambio/evento en el estado de algún proceso -> Salida por pantalla
 		if [[ $haHabidoUnCambio -eq 1 ]]; then
 			imprimirTablaPredeterminada
 			dibujarMemoria
@@ -1537,18 +1542,23 @@ ejecucion(){
 		fi
 	done
 
-	rm temp > /dev/null
-	clear
-	imprimirTablaPredeterminada
-	echo "════════════════════════════════════════════════════════════════════════════"
-	echo "Tiempo de ejecución Total: $tiempoEjecucion"
-	echo "Prioridad más alta: $priorMax"
-	echo "Prioridad más baja: $priorMin"
-	imprimirLCyan "Tiempo de ejecución medio: $BOLD$tEjecMedio"
-	imprimirLCyan "Tiempo de espera medio: $BOLD$tEsperaMedio"
-	imprimirLCyan "Tiempo de retorno medio: $BOLD$tRetornoMedio"
-	dibujarMemoria
-	dibujarEstadoCPU
+	pantallaFinal(){
+		tEjecMedio=$(echo "scale=2;$tEjecAcumulado/$procEjecutados" | bc -l)
+		tEsperaMedio=$(echo "scale=2;$tEsperaAcumulado/$procEjecutados" | bc -l)
+		tRetornoMedio=$(echo "scale=2;$tRetornoAcumulado/$procEjecutados" | bc -l)
+
+		clear
+		imprimirTablaPredeterminada
+		echo "════════════════════════════════════════════════════════════════════════════"
+		echo "Tiempo de ejecución Total: $tiempoEjecucion"
+		echo "Prioridad más alta: $priorMax"
+		echo "Prioridad más baja: $priorMin"
+		imprimirLCyan "Tiempo de ejecución medio: $BOLD$tEjecMedio"
+		imprimirLCyan "Tiempo de espera medio: $BOLD$tEsperaMedio"
+		imprimirLCyan "Tiempo de retorno medio: $BOLD$tRetornoMedio"
+		dibujarMemoria
+		dibujarEstadoCPU
+	}
 }
 
 
@@ -1575,26 +1585,15 @@ main(){
 	║${L_GREEN} Prioridad Máxima: ${NC}${B_BLUE}$priorMax${NC}			║
 	║					║
 	╚═══════════════════════════════════════╝"
-	escribirInforme "
-	╔═══════════════════════════════════════╗
-	║					║
-	║ Tamaño Partición: $tamPart			║
-	║ Número de Particiones: $numeroParticiones		║
-	║ Número de Procesos: $numProc 		║
-	║ Prioridad Mínima: $priorMin			║
-	║ Prioridad Máxima: $priorMax			║
-	║					║
-	╚═══════════════════════════════════════╝"
+	
 	imprimirLCyan "Pulsa enter para continuar" -n
-	read -s
+	read -ers
 	
 	ejecucion 
-
-
 }
 
 
-global 
+global #Carga las variables globales y ejecuta el main -> Está hecho así para poder minimizar todas las variables de global en el outline de VSCODE
 convertirFicheroColorEnBlancoNegro "informeDebug.txt" "informeDebugBN.txt" "false"
 scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
 if [ "$abrirInforme" = "s" ]; then
