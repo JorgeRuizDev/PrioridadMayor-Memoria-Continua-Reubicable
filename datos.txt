@@ -1,14 +1,17 @@
-Tamaño particiones:780
-Numero de particiones:7
+Tamaño Memoria:21
 Apropiativo:n
 Estatico:s
-Prioridad Mínima:30
-Prioridad Máxima:-20
+Prioridad Mínima:-6
+Prioridad Máxima:29
 Nombre	T.Lleg	T.Ejec	Prior	Tamaño
-P1	8	3	5	9	
-P2	0	2	-7	9	
-P3	11	10	23	9	
-P4	15	3	-19	5	
-P5	5	3	22	5	
-P6	2	1	-4	8	
-P7	6	1	-15	1	
+P01	11	1	10	6	
+P02	0	6	23	10	
+P03	8	7	28	9	
+P04	1	7	28	7	
+P05	1	6	2	9	
+P06	9	10	12	11	
+P07	8	7	-1	20	
+P08	6	10	-3	19	
+P09	12	7	-1	16	
+P10	2	7	8	1	
+P11	13	1	-5	15	

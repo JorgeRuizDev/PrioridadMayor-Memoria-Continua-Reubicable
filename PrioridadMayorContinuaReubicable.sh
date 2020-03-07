@@ -357,7 +357,7 @@ scanfNumMinMax(){
 	local numMinimo=$3
 	local numMaximo=$4
 	#si el numMinimo es mas grande que numMaximo intercambia las variables
-	if [ $numMinimo -gt $numMaximo ]; then 
+	if [[ "$numMinimo" -gt "$numMaximo" ]]; then 
 		numMinimo=$4
 		numMaximo=$3
 	fi
@@ -419,7 +419,7 @@ numAleatorio(){
 comprobarRango(){
 	local numMinimo=$4
 	local numMaximo=$5
-	if [ $numMinimo -gt $numMaximo ]; then
+	if [[ "$numMinimo" -gt "$numMaximo" ]]; then
 		numMinimo=$5
 		numMaximo=$4
 	fi
@@ -653,10 +653,12 @@ datosManualProcesos(){
 	local seguro
 	local -i j
 	clear
-	imprimirTabla 1 2 3 4 5
-	#TODO: Nombre procesos autómaticos
-	scanfString "Nombre del proceso $1: " procesos[$1,$P_NOMBRE]
-	comprobarRepite $1
+	asignarColorProceso "$1" "$1"
+	if [[ $1 -lt 10 ]]; then
+		procesos[$1,$P_NOMBRE]="P0$1"
+	else
+		procesos[$1,$P_NOMBRE]="P$1"
+	fi
 	clear
 	imprimirTabla 1 2 3 4 5
 	scanfNum "¿Tiempo de llegada del proceso $1?: " procesos[$1,$P_TLLEGADA] 0
@@ -668,7 +670,6 @@ datosManualProcesos(){
 	scanfNumMinMax "¿Prioridad del proceso $1?: " procesos[$1,$P_PRIORIDAD] $priorMin $priorMax
 	clear
 	imprimirTabla 1 2 3 4 5
-	#TODO: Sustituir por el tamaño máximo de la memoria. 
 	scanfNumMinMax "¿Tamaño del proceso $1? (Menor o igual del tamaño de memoria [$tamMemoria] ): " procesos[$1,$P_TAMANIO] 1 $tamMemoria
 	clear
 	imprimirTabla 1 2 3 4 5
@@ -679,6 +680,7 @@ datosManualProcesos(){
 		done
 		datosManualProcesos $1
 	fi
+	ordenarProcesos # -> se reordena la tabla mediante el tiempo de llegada. Se hace en este punto para saber la pos. del proceso
 }
 
 # Nombre: datosFichero
@@ -699,13 +701,12 @@ datosFichero(){
 		sleep 1
 		numLineas=`cat $nomFile | wc -l`
 		#sed -n 1p coge la linea 1 y cut -d ":" -f 2 la columna 2 delimitado por :
-		tamPart=`sed -n 1p $nomFile | cut -d ":" -f 2`
-		numeroParticiones=`sed -n 2p $nomFile | cut -d ":" -f 2`
-		opcionApropiativo=`sed -n 3p $nomFile | cut -d ":" -f 2`
-		opcionEstatico=`sed -n 4p $nomFile | cut -d ":" -f 2`
-		priorMin=`sed -n 5p $nomFile | cut -d ":" -f 2`
-		priorMax=`sed -n 6p $nomFile | cut -d ":" -f 2`
-		for (( i=1,k=8; k<=numLineas; i++,k++)) do
+		tamMemoria=`sed -n 1p $nomFile | cut -d ":" -f 2`
+		opcionApropiativo=`sed -n 2p $nomFile | cut -d ":" -f 2`
+		opcionEstatico=`sed -n 3p $nomFile | cut -d ":" -f 2`
+		priorMin=`sed -n 4p $nomFile | cut -d ":" -f 2`
+		priorMax=`sed -n 5p $nomFile | cut -d ":" -f 2`
+		for (( i=1,k=7; k<=numLineas; i++,k++)) do
 			((numProc++))
 			for (( j=1; j<=numCol; j++ )) do
 				procesos[$i,$j]=`sed -n ${k}p $nomFile| cut -d "	" -f $j`
@@ -713,6 +714,7 @@ datosFichero(){
 		done
 		comprobarDatosFichero
 		establecerPrioridad
+		asignarColoresTabla
 	else #si no existe el fichero vuelve a mandar al menú de inicio
 		imprimirAviso "$nomFile no existe. Volviendo al menú de inicio..."
 		sleep 2
@@ -726,12 +728,11 @@ datosFichero(){
 comprobarDatosFichero(){
 	local -i i
 	local -i j
-	#TODO: Sustituir particiones por el tamaño de memoria.
-	#TODO: Eliminar número de particiones.
 	
-	comprobarRango "El tamaño de particiones es incorrecto, tendrás que introducir por teclado otro número: " $tamPart tamPart 1 999999
-	comprobarRango "El número de particiones es incorrecto, tendrás que introducir por teclado otro número: " $numeroParticiones numeroParticiones 1 999999
-	comprobarSN "Opcion apropiativo incorrecto, tendrás que introducir por teclado [s/n]:" $opcionApropiativo opcionApropiativo
+	echo tme: $tamMemoria
+	
+	comprobarRango "El tamaño de memoria es incorrecto, tendrás que introducirlo por teclado: " "$tamMemoria" tamMemoria 1 999
+	comprobarSN "Opcion apropiativo incorrecto, tendrás que introducir por teclado [s/n]:" "$opcionApropiativo" opcionApropiativo
 	for ((i=1;i<=numProc;i++)) do
 		for((j=1;j<=numCol;j++)) do
 			case "$j" in
@@ -739,16 +740,16 @@ comprobarDatosFichero(){
 					comprobarRepite $i 
 				;;
 				2)
-					comprobarRango "El tiempo de llegada del proceso ${procesos[$i,$P_NOMBRE]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 0 999999 
+					comprobarRango "El tiempo de llegada del proceso ${procesos[$i,$P_NOMBRE]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 0 999
 				;;
 				3)
-					comprobarRango "El tiempo de ejecución del proceso ${procesos[$i,$P_NOMBRE]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 1 999999 
+					comprobarRango "El tiempo de ejecución del proceso ${procesos[$i,$P_NOMBRE]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 1 999
 				;;
 				4)
 					comprobarRango "La prioridad del proceso ${procesos[$i,$P_NOMBRE]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] $priorMin $priorMax 
 				;;
 				5)
-					comprobarRango "El tamaño del proceso ${procesos[$i,$P_NOMBRE]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 1 $tamPart 
+					comprobarRango "El tamaño del proceso ${procesos[$i,$P_NOMBRE]} es incorrecto, introduce otro número: " ${procesos[$i,$j]} procesos[$i,$j] 1 $tamMemoria
 				;;
 			esac
 		done
@@ -761,21 +762,23 @@ comprobarDatosFichero(){
 datosAleatorios(){
 	local -i i
 	
-	tamMemoria=15
-	numAleatorio tamPart 1 100 #aleatorio de tamaño de partición
-	tamPart=$[$tamPart * 10] #multiplicamos por 10 para que acabe en 0 el tamaño particion, es meramente estetico
-	numAleatorio numeroParticiones 1 7 
-	numAleatorio numProc 5 12
+	numAleatorio tamMemoria 5 35
+	numAleatorio numProc 5 13
 	numAleatorio priorMin -30 30
 	numAleatorio priorMax -30 30
 	establecerPrioridad
-	for ((i=1; i<=numProc; i++)) do 
-		procesos[$i,$P_NOMBRE]="P$i"
+	for ((i=1; i<=numProc; i++)) do
+		if [[ $i -lt 10 ]]; then 			#Nombres que siempre ocupen 3 chars (p01 - p99)
+			procesos[$i,$P_NOMBRE]="P0$i"
+		else
+			procesos[$i,$P_NOMBRE]="P$i"
+		fi
 		numAleatorio procesos[$i,$P_TLLEGADA] 0 15 #numero aleatorio de t.llegada entre 0 y 15
 		numAleatorio procesos[$i,$P_TEJECUCION] 1 10 #numero aleatorio de t.ejec entre 0 y 10		
 		numAleatorio procesos[$i,$P_PRIORIDAD] $priorMin $priorMax #numero aleatorio de prioridad entre prioriMin y priorMax
-		numAleatorio procesos[$i,$P_TAMANIO] 1 10 #numero aleatorio de tamaño entre 1 y tamPart
+		numAleatorio procesos[$i,$P_TAMANIO] 1 $tamMemoria #numero aleatorio de tamaño entre 1 y tamMemoria
 	done
+	asignarColoresTabla
 }
 
 # Nombre: escribeDatos
@@ -784,8 +787,7 @@ escribeDatos(){
 	#FIXME: No está actualizado a la versión segun necesidades
 	local -i i
 	local -i j
-	echo "Tamaño particiones:$tamPart" > datos.txt
-	echo "Numero de particiones:$numeroParticiones" >> datos.txt
+	echo "Tamaño Memoria:$tamMemoria" > datos.txt
 	echo "Apropiativo:$opcionApropiativo" >> datos.txt
 	echo "Estatico:$opcionEstatico" >> datos.txt
 	echo "Prioridad Mínima:$priorMin" >> datos.txt
@@ -823,49 +825,6 @@ ordenarProcesos(){
 	done
 }
 
-# Nombre: imprimirTabla
-# Descripcion: imprime las columnas del array procesos pasado como parámetro
-# @param $@ (todos): índice de las columnas que se quiere imprimir en pantalla
-#
-# Importante: Función Original: Sin Uso (deprecated)
-# considere usar la funcion imprimirTabla()
-imprimirTablaOld(){
-	local -i i
-	local -i j
-	local -i k
-
-	for ((k=0;k<$#;k++)) do #imprime la primera linea de la tabla. Depende de la cantidad de columnas
-		echo -n -e "$BLUE+---------------"
-	done
-	echo -e "+${NC}"
-
-	for k in "$@" #imprime la cabecera de la tabla
-	do
-		echo -e -n "$BLUE|${NC}${B_L_YELLOW}${cabeceraProcesos[$k]}${NC}\t"
-	done
-	echo -e "$BLUE|${NC}"
-
-	for (( i=1; i<=numProc; i++ )) do 
-		if [ $((($i-1) % 5 )) -eq 0 ]; then #imprime una línea de separación cada 5 procesos
-			for ((k=0;k<$#;k++)) do 
-				echo -n -e "$BLUE+---------------"
-			done
-			echo -e "+${NC}" 
-		fi
-		for j in "$@" #imprime los datos de los procesos
-		do
-				echo -n -e "$BLUE|${NC}${BOLD}${procesos[$i,$j]}${NC}\t\t"
-
-		done
-		echo -e "$BLUE|${NC}"
-
-	done
-
-	for ((k=0;k<$#;k++)) do 
-		echo -n -e "$BLUE+---------------"
-	done
-	echo -e "+${NC}"
-}
 # Nombre: imprimirTablaPredeterminada
 # Date; 06/03/2020
 # Descripción: Función que llama a la función "imprimirTabla()" con unos parámetros específicos
@@ -983,6 +942,9 @@ eliminarCola(){
 # Nombre: calcularPosProceso
 # Descripción: Actualiza las variables $P_POSINI y $P_POSFIN del proceso indicado
 # Date: 05/03/2020
+# Ejemplo de USO: Si tuviese tiempo para hacer un programa eficiente, habría que actualizar la tabla a paritr
+# 	de esta función cuando: Se añade un proceso en mem -> se reubica. Como no hay tiempo y no se valora, se recalcula en cada bucle
+#	la de todos los procesos en memoria. 
 # @Param $1: Índice del proceso a recalcular
 calcularPosProceso(){
 	
@@ -1196,16 +1158,18 @@ encontrarHuecoEnMemoria(){
 		eval ${2}="$posicionInicialEnLaQueEmpiezaElHueco"
 	fi
 }
-
+# Nombre: reubicarProcesos
+# date: 22/03/2020
+# Descripción: Reubica la memoria
+# Nota del autor: Si no hubiese hecho el array bidimensional, esto podría haber sído un simple oneLiner que ordenase el array de menor a mayor
+# 	(No he tenido en cuenta donde irían los nulls, pero podrían haber sido sutiutidos por 0 )
+# indepentientemente, bash es una chusta, e igual no va tan bien como debería.
 reubicarProcesos(){
+	local ultimoIndiceEncontrado="/"
+
 	# Buffer destinado a guardar los elementos que se encuentran en este momento en memoria
 	# Almacenará: Un puntero a la fila de la tabla correspondiente a cada proceso
 	# Leerá dicho puntero/indice de la tabla de memoria, de la capa MEM_INDICE
-
-	local ultimoIndiceEncontrado="/"
-	
-	
-	#Vaciamos el array
 	unset bufferReubicacion
 	declare -a bufferReubicacion
 
@@ -1219,7 +1183,7 @@ reubicarProcesos(){
 	done
 
 	vaciarMemoria
-
+	
 	local -i ultimaPosicionMemoria=1	#Variable que almacenará la última posición en la que se ha "creado" memoria
 	#Rellenamos la memoria!
 	for indice in "${bufferReubicacion[@]}"; do
@@ -1339,7 +1303,7 @@ asignarColorProceso(){
 
 dibujarMemoria(){
 	local -i memoriaEnUso
-	local memoriaEnUsoPorcieto #Es un string al ser float
+	local memoriaEnUsoPorciento #Es un string al ser float
 
 	memoriaEnUso=$((tamMemoria-memoriaLibre))
 	memoriaEnUsoPorciento=$(echo "scale=2;100*$memoriaEnUso/$tamMemoria" | bc -l) #FIXME: A veces se pone a 0% uando debería ser mayor
@@ -1564,10 +1528,9 @@ ejecucion(){
 
 #main
 main(){
-	cargaDatos $opcionYN
+	cargaDatos
 	escribeDatos
 	ordenarProcesos
-	asignarColoresTabla
 	inicializarArrays
 	nularColumna "$P_TRETORNO" "$P_POSINI" "$P_POSFIN" "$P_ESTADO"
 	clear
@@ -1599,6 +1562,9 @@ scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
 if [ "$abrirInforme" = "s" ]; then
 	less -R informeDebug.txt
 fi
+#FIXME:	Las direcciones de los procesos no van
+#FIXME: Los valores medios creo que tampoco
+
 
 
 #Cosas que no funcionan #FIXME/TODO:
