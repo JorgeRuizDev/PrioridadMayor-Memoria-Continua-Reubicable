@@ -1,17 +1,17 @@
-Tamaño Memoria:21
+Tamaño Memoria:22
 Apropiativo:n
 Estatico:s
-Prioridad Mínima:-6
-Prioridad Máxima:29
+Prioridad Mínima:25
+Prioridad Máxima:-29
 Nombre	T.Lleg	T.Ejec	Prior	Tamaño
-P01	11	1	10	6	
-P02	0	6	23	10	
-P03	8	7	28	9	
-P04	1	7	28	7	
-P05	1	6	2	9	
-P06	9	10	12	11	
-P07	8	7	-1	20	
-P08	6	10	-3	19	
-P09	12	7	-1	16	
-P10	2	7	8	1	
-P11	13	1	-5	15	
+P01	14	9	20	3	
+P02	2	1	14	7	
+P03	9	4	-17	8	
+P04	5	3	-21	11	
+P05	12	10	-26	2	
+P06	1	2	19	15	
+P07	15	3	-11	1	
+P08	3	9	13	6	
+P09	12	7	-8	9	
+P10	10	10	14	11	
+P11	14	2	-10	14	

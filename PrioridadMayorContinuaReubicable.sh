@@ -241,6 +241,27 @@ forzarCierre(){
 	fin_programa
 }
 
+# Nombre: ComprobaciónDirectorio
+# Date: 07/03/2020
+# Descripción: Comprueba que el script está siendo ejécutandose desde ./algo.sh
+# 	y no desde una dirección distinta (./test/priMayor/algo.sh),
+# 	ya que crearía los archivos de salida en ./____/algo.sh y no en el mismo directorio de ./algo.sh
+#
+comprobacionDirectorio(){
+	local -i nPuntosBarras
+	local -i nDirectorios
+	
+	nDirectorios=$(echo $0 | grep -oF '/' | wc -l)
+	nPuntosBarras=$(echo $0 | grep -oF './' | wc -l)
+	if [[ $nDirectorios -gt $nPuntosBarras ]]; then
+		echo "Directorio de ejecución: $0"
+
+		imprimirLCyan "Si cree que este mensaje no debería salir, por favor, borre ó comente la última línea:"
+		cat $0 | grep -n "comprobacionDirectorio stringDeBúsqueda, no tiene valor alguno" 
+
+		salirPorErrorCritico "Por favor, ejecute el script desde la ruta ./script.sh y no desde otro directorio o carpetas"
+	fi
+}
 
 # Nombre: FuncionDeTesteo
 # Descripción: Función simple que ejecuta un código aislado, sin ensuciar el main
@@ -264,8 +285,8 @@ imprimirLCyan(){
 # Nombre: fin_programa
 # Descripcion: se termina la ejecición del script
 fin_programa(){
-	imprimirLCyan "Saliendo del programa"
-	exit    
+	imprimirLCyan "Saliendo del programa..."
+	exit 0   
 }
 
 # Nombre: scanfSiNo
@@ -822,10 +843,10 @@ ordenarProcesos(){
 #	He decidido hacer esto por dos razones: 1º: Puedo reutilizar la tabla en la entrada de datos con 4 columnas 2º: Puedo poner la cabecera fija cómodamente.
 imprimirTablaPredeterminada(){
 	echo ""
-	echo "    │ D.INICIAL.│    TIEMPO    │   MEMO  │    OTROS DATOS   │"
-	echo "┌───┼───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤"
-	imprimirTabla "$P_NOMBRE" "$P_TLLEGADA" "$P_TEJECUCION" "$P_TAMANIO" "$P_TESPERA" "$P_TRETORNO" "$P_TRESTANTE" "$P_POSINI" "$P_POSFIN" "$P_ESTADO"
-	echo "└───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘"
+	echo "    │   D.INICIAL.  │    TIEMPO    │   MEMO  │    OTROS DATOS   │"
+	echo "┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤"
+	imprimirTabla "$P_NOMBRE" "$P_TLLEGADA" "$P_TEJECUCION" "$P_TAMANIO" "$P_PRIORIDAD" "$P_TESPERA" "$P_TRETORNO" "$P_TRESTANTE" "$P_POSINI" "$P_POSFIN" "$P_ESTADO"
+	echo "└───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘"
 }
 
 
@@ -1289,29 +1310,90 @@ asignarColorProceso(){
 		imprimirErrorCritico "El proeso pasado no se encuentra en la tabla"
 	fi
 }
+# Nombre: truncarMemoria
+# Date: 08/03/2020
+# Parámetros: Utiliza la variable memoriaTruncada declarada en dibujarMemoria
+# Descripción: rellena un array bidimensional con el string de memoria a imprimir.
+#		este nuevo string permite representar la memoria de forma dínamica, dependiendo del ancho del terminal.
+truncarMemoria(){
+	local -i ultimaPosMemEmplazada=1
+	local    ultimoIndiceEncontrado=-1
+	local -i i
+	local -i j
 
+	for (( i=1; i<= (altoMemoriaTruncada*3); i+=3 )); do
+		for ((j=1; j <= anchoTerminalBloques; j++)); do
+			memoriaTruncada[$i,$j]=${memoriaSegunNecesidades[$ultimaPosMemEmplazada,$MEM_TOSTRING]}
+			
+			if [[ ${memoriaSegunNecesidades[$ultimaPosMemEmplazada,$MEM_INDICE]} -ne $ultimoIndiceEncontrado ]];then
+				ultimoIndiceEncontrado=${memoriaSegunNecesidades[$ultimaPosMemEmplazada,$MEM_INDICE]}
+				
+				#Fila de los nombres
+				if [[ $ultimoIndiceEncontrado -eq $MEM_HUECO_VACIO ]]; then #Si el hueco está vacío
+					memoriaTruncada[$((i-1)),$j]="---"
+				else
+					memoriaTruncada[$((i-1)),$j]=${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
+				fi
+
+				#Fila de las posiciones
+				if [[ $ultimaPosMemEmplazada -lt 10 ]]; then
+					memoriaTruncada[$((i+1)),$j]="$ultimaPosMemEmplazada  "	#Metemos espacios al final para que no se descuadre, si el tamaño es >=100, se descuadra
+				else															#Sería poner un elif con el tamaño del int, pero me da pereza, pd: he tardado más escribiendo esto
+					memoriaTruncada[$((i+1)),$j]="$ultimaPosMemEmplazada "		#que haciendolo, un saludo: Jorge (09/03/2020 - 13:17)
+				fi
+			else
+				memoriaTruncada[$((i-1)),$j]="   "		 #No hay proceso -> Vacío
+				memoriaTruncada[$((i+1)),$j]="   "		 #No hay dirección al no haber cambio de proceso -> Vacío
+			fi
+			((ultimaPosMemEmplazada++))
+
+			if [[ $ultimaPosMemEmplazada -gt $tamMemoria ]];then break; fi
+		done
+			ultimoIndiceEncontrado=-1 #reseteo para que se imprima siempre en cada línea la dirección y el proceso
+	done
+	#Escribe la última posición/tam memoria detrás de todos los strings
+	#memoriaTruncada[$(( (altoMemoriaTruncada*3) -2 )),$((anchoTerminalBloques-1))]="|$tamMemoria"
+
+
+}
 
 dibujarMemoria(){
 	local -i memoriaEnUso
 	local memoriaEnUsoPorciento #Es un string al ser float
+	declare -A memoriaTruncada
+	declare -i anchoTerminal=$(tput cols) #En columnas
+	declare -i anchoTerminalBloques=$((anchoTerminal/3)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color
+	declare -i altoMemoriaTruncada
+	
+	#Calculamos el alto de memoria (el número de filas que ocupará truncada)
+	if [[ $((tamMemoria%anchoTerminalBloques)) == 0 ]];then
+		altoMemoriaTruncada=$((tamMemoria/anchoTerminalBloques))
+	else	#Si la memoria ocupa parte de una líena, la asignamos entera
+		altoMemoriaTruncada=$(( ( tamMemoria/anchoTerminalBloques ) + 1 ))
+	fi
 
+	#Stats mememoria: 
 	memoriaEnUso=$((tamMemoria-memoriaLibre))
 	memoriaEnUsoPorciento=$(echo "scale=2;100*$memoriaEnUso/$tamMemoria" | bc -l) 
-
 
 	imprimirLCyan "Uso de memoria: $memoriaEnUso/$tamMemoria ($memoriaEnUsoPorciento%) -> Memoria libre: $memoriaLibre"
 
 	if [[ $DEBUG_ENABLE == true ]]; then #Imprime los índices de memoria para mejorar visualización
 		for((i=1;i<=tamMemoria;i++)); do
+			break
 			echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
-			echo -n ""
 		done
 		echo "" #salto de línea
 	fi
-	for((i=1;i<=tamMemoria;i++)); do
-		echo -ne "${memoriaSegunNecesidades[$i,$MEM_TOSTRING]}"
+
+	truncarMemoria 	#Imprimimos la memoria truncada
+	for (( i= 0; i< 3*altoMemoriaTruncada; i++ ));do
+		
+		for (( j=0; j<=anchoTerminalBloques; j++));do
+			echo -en "${memoriaTruncada[$i,$j]}"
+		done
+		echo ""
 	done
-	echo ""
 }
 
 # Nombre: aniadirSiguienteProcesoACPU
@@ -1405,7 +1487,87 @@ comprobarSiElProcesoEnCPUHaTerminado(){
 	procesos[$procesoCPU,$P_TRETORNO]=$tiempoEjecucion
 }
 
+# Nombre: truncarBarraCPU
+# Date: 09/03/2020
+# Descripción: Trunca la barra de CPU, y añade el tiempo de inicio y fin de cada proceso, así como el nombre correspondiente.
+# Nota: Tiene un uso similar al truncado de memoria. Los cálculos de las distintas variables aquí referenciadas han sido realizados en dibujarEstadoCPU()
+#			ya que es necesario saber de antemano el ancho y alto del array a imprimir y a generar, y puede variar si se calcula 2 veces, una en cada función.
+#			Además, aquí no tenemos un vector.length para saber cuanto mide un array, bash-ura de lenguaje. 
+#		Podría hacerse en una misma función, pero los parámetros en Bash son un dolor, y paso de perder el tiempo haciendo un código de muy alta calidad.
+#			
+truncarBarraCPU(){
+	declare -a barraMemoriaColor #Array que contiene los string a imprimir, generado en: colorearBarraMemoria. En este caso hemos trabajado con 2 arrays y no con uno, porque soy bobo.
+									#PD: no es lo más eficiente, ya que se colorea cada vez, quizá debería hacerlo en el momento, como con la memoria? Dunno m8
+	local -i i
+	local -j j
+	local -i ultimaPosMemEmplazada=1
+	local    ultimoIndiceEncontrado=-1
+	echo "Truncando barra memoria"
+	colorearBarraMemoria
+
+	for (( i=1; i<= (altoLineaTiempoTruncada*3); i+=3 )); do
+		for ((j=1; j <= anchoTerminalBloques; j++)); do
+			lineaTiempoTruncada[$i,$j]=${barraMemoriaColor[$ultimaPosMemEmplazada]}
+			
+			if [[ ${lineaEstadoCPU[$ultimaPosMemEmplazada]} -ne $ultimoIndiceEncontrado ]];then
+				ultimoIndiceEncontrado=${lineaEstadoCPU[$ultimaPosMemEmplazada]}
+				
+				#Fila de los nombres
+				if [[ $ultimoIndiceEncontrado -eq 0 ]]; then #Si el hueco está vacío
+					lineaTiempoTruncada[$((i-1)),$j]="   "
+				else
+					lineaTiempoTruncada[$((i-1)),$j]=${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
+				fi
+
+				#Fila de las posiciones
+				if [[ $ultimaPosMemEmplazada -lt 10 ]]; then
+					lineaTiempoTruncada[$((i+1)),$j]="$ultimaPosMemEmplazada  "	#Metemos espacios al final para que no se descuadre, si el tamaño es >=100, se descuadra
+				else															#Sería poner un elif con el tamaño del int, pero me da pereza, pd: he tardado más escribiendo esto
+					lineaTiempoTruncada[$((i+1)),$j]="$ultimaPosMemEmplazada "		#que haciendolo, un saludo: Jorge (09/03/2020 - 13:17)
+				fi
+			else
+				lineaTiempoTruncada[$((i-1)),$j]="   "		 #No hay proceso -> Vacío
+				lineaTiempoTruncada[$((i+1)),$j]="   "		 #No hay dirección al no haber cambio de proceso -> Vacío
+			fi
+			((ultimaPosMemEmplazada++))
+
+			if [[ $ultimaPosMemEmplazada -gt $tiempoEjecucion ]];then break; fi
+		done
+			ultimoIndiceEncontrado=-1 #reseteo para que se imprima siempre en cada línea la dirección y el proceso
+	done
+	
+}
+
+colorearBarraMemoria(){
+	local colorProceso
+	echo "Coloreando barra memoria"
+	for ((i=0; i< tiempoEjecucion; i++)); do
+		if [[ ${lineaEstadoCPU[$i]} -ne 0 ]]; then
+			colorProceso=${procesos[${lineaEstadoCPU[$i]},$P_COLOR]}
+		else
+			colorProceso=$_WHITE
+		fi
+		barraMemoriaColor+=("${colorProceso}   ${NC}") #3 espacios porque es el ancho del proceso que desea el profesor
+	done
+
+}
+
+# Nombre: dibujarEstadoCPU
+# Date: 09/03/2020
+# Descripción: Imprime el estado de la CPU por pantalla 
 dibujarEstadoCPU(){
+	local -i
+	declare -i anchoTerminal=$(tput cols) #En columnas
+	declare -i anchoTerminalBloques=$((anchoTerminal/3)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color
+	declare -A lineaTiempoTruncada
+	declare -i altoLineaTiempoTruncada
+	
+	#Calculamos el alto de memoria (el número de filas que ocupará truncada)
+	if [[ $((tiempoEjecucion%anchoTerminalBloques)) == 0 ]];then
+		altoLineaTiempoTruncada=$((tiempoEjecucion/anchoTerminalBloques))
+	else	#Si la memoria ocupa parte de una líena, la asignamos entera
+		altoLineaTiempoTruncada=$(( ( tiempoEjecucion/anchoTerminalBloques ) + 1 ))
+	fi
 
 	#TODO: Pregunta: Como hacer la línea de CPU
 
@@ -1413,7 +1575,15 @@ dibujarEstadoCPU(){
 	for((i=0;i<tiempoEjecucion;i++)); do
 		echo -n "${lineaEstadoCPU[$i]}|"
 	done
+
 	echo ""
+	truncarBarraCPU
+	for (( i= 0; i< 3*altoLineaTiempoTruncada; i++ ));do
+		for (( j=0; j<anchoTerminalBloques ; j++));do
+			echo -en "${lineaTiempoTruncada[$i,$j]}"
+		done
+		echo ""
+	done
 }
 
 # Nombre: ejecucion
@@ -1433,7 +1603,7 @@ ejecucion(){
 	
 
 	while [[ $procEjecutados -lt $numProc ]]; do # mientras el numero de procesos ejecutados sea menor a procesos total
-		
+		clear
 		haHabidoUnCambio=0
 
 		comprobarSiElProcesoEnCPUHaTerminado
@@ -1477,10 +1647,8 @@ ejecucion(){
 
 		#Si ha habido un cambio/evento en el estado de algún proceso -> Salida por pantalla
 		if [[ $haHabidoUnCambio -eq 1 ]]; then
-			clear
-			echo "Tiempo de ejecución: $tiempoEjecucion"
-			echo "Prioridad más alta: $priorMax"
-			echo "Prioridad más baja: $priorMin" 
+
+			echo -e "${B_WHITE}Instante: $((tiempoEjecucion-1)) | P. más alta: $priorMax | P. más baja: $priorMin ${NC}"
 
 			imprimirTablaPredeterminada
 			dibujarMemoria
@@ -1488,6 +1656,7 @@ ejecucion(){
 			imprimirLCyan "Número de procesos ejecutados $procEjecutados/$numProc"
 
 			breakpoint "Fin del loop $tiempoEjecucion del WHILE"
+			echo -------------------------------------------------------------------
 		fi
 	done
 
@@ -1521,6 +1690,7 @@ ejecucion(){
 
 #main
 main(){
+	comprobacionDirectorio stringDeBúsqueda, no tiene valor alguno
 	mostrarPantallaInformacion
 	cargaDatos
 	escribeDatos
