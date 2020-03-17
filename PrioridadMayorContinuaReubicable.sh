@@ -122,7 +122,7 @@ declare -r MEM_TOSTRING=1
 declare -r MEM_HUECO_VACIO="null"
 	#Valores que se imprimen por pantalla
 declare -r MEM_STRING_HUECO_VACIO="$_WHITE${WHITE}XXX${_DEFAULT}"
-declare -r MEM_STRING_HUECOSINCOLOR="___"	#Se colorea con el color del proceso
+declare -r MEM_STRING_HUECOSINCOLOR="_*_"	#Se colorea con el color del proceso
 
 #	######################################
 #	Declares 2020:
@@ -737,8 +737,6 @@ comprobarDatosFichero(){
 	local -i i
 	local -i j
 	
-	echo tme: $tamMemoria
-	
 	comprobarRango "El tamaño de memoria es incorrecto, tendrás que introducirlo por teclado: " "$tamMemoria" tamMemoria 1 999
 	comprobarSN "Opcion apropiativo incorrecto, tendrás que introducir por teclado [s/n]:" "$opcionApropiativo" opcionApropiativo
 	for ((i=1;i<=numProc;i++)) do
@@ -812,16 +810,25 @@ escribeDatos(){
 # Nombre: ordenarProcesos
 # Descripcion: ordena el array procesos en función del tiempo de llegada.
 # Se usa selection sort como algortimo de ordenamiento
+# Version 2.0
+# Date 17/03/2020
+# Detalles de modificación: Si dos prioridades son iguales, el que haya sido introducido antes tiene prioridad
+#		EJ: PO1 entra antes que P03, aunque tengan el mismo t.llegada.
 ordenarProcesos(){
 	local -i i
 	local -i j
-	local -i minLlegada
-	#TODO: Pregunta: Funciona bien? Es de los anteriores alumnos...
+	local -i minLlegada	#índice al proceso que es menor en llegada
+	
 	for((i=1;i<numProc;i++)) do
 		minLlegada=$i
 		for((j=i+1;j<=numProc;j++)) do
 			if [ ${procesos[$j,$P_TLLEGADA]} -lt ${procesos[$minLlegada,$P_TLLEGADA]} ]; then #compara el tiempo de llegada
 					minLlegada=$j
+
+			elif [[ ${procesos[$j,$P_TLLEGADA]} -eq ${procesos[$minLlegada,$P_TLLEGADA]} ]]; then #Si son igaules
+				if [[ ${procesos[$j,$P_NOMBRE]} < ${procesos[$minLlegada,$P_NOMBRE]} ]]; then #Compara los nombres
+					minLlegada=$j
+				fi
 			fi
 		done
 		#intercambio de elementos
@@ -877,17 +884,9 @@ imprimirTabla(){
 		for j in "$@";do #imprime los datos de los procesos
 			printf " ${procesos[$i,$P_COLORLETRA]}%-*s${NC}" "${anchosTabla[$j]}" "${procesos[$i,$j]:0:${anchosTabla[$j]}}"
 		done
-		echo -e ""
+		echo -e "${NC}"
 
 	done
-}
-
-# Nombre: informeTabla
-# Descripcion: escribe en el informe las columnas del array procesos pasado como parámetro
-# @param $@ (todos): índice de las columnas que se quiere escribir en el informe
-informeTabla(){	#FIXME: borrar funcion + llamadas
-	local -i i
-
 }
 
 # Nombre: convertirFicheroColorEnBlancoNegro 	
@@ -1172,7 +1171,7 @@ encontrarHuecoEnMemoria(){
 # date: 22/03/2020
 # Descripción: Reubica la memoria
 # Nota del autor: Si no hubiese hecho el array bidimensional, esto podría haber sído un simple oneLiner que ordenase el array de menor a mayor
-# 	(No he tenido en cuenta donde irían los nulls, pero podrían haber sido sutiutidos por 0 )
+# 	(No he tenido en cuenta donde irían los nulls, pero podrían haber sido sustiutidos por 0 )
 # indepentientemente, bash es una chusta, e igual no va tan bien como debería.
 reubicarProcesos(){
 	local ultimoIndiceEncontrado="/"
@@ -1299,6 +1298,7 @@ asignarColoresTabla(){
 # Date: 05/03/2020
 # Descripción: Pasado el índce del proceso y un entero, se asignará a dicho proceso el color correspondiente al entero.
 # Ejemplo de uso: Al introducir un proceso manualmente, se le asigna el color al momento! 
+# Nota: Los arrays de colores deben tener el mismo tamaño y los colores en la misma posición.
 # @Param $1: índice/puntero al proceso en la tabla procesos
 # @Param $2: entero cualquiera
 asignarColorProceso(){
@@ -1307,7 +1307,7 @@ asignarColorProceso(){
 		procesos[$1,$P_COLOR]=${coloresFondo[$2%${#coloresFondo[@]}]}
 		procesos[$1,$P_COLORLETRA]=${coloresLetras[$2%${#coloresLetras[@]}]}
 	else
-		imprimirErrorCritico "El proeso pasado no se encuentra en la tabla"
+		imprimirErrorCritico "El proeso intorudcido no se encuentra en la tabla"
 	fi
 }
 # Nombre: truncarMemoria
@@ -1322,7 +1322,7 @@ truncarMemoria(){
 	local -i j
 
 	for (( i=1; i<= (altoMemoriaTruncada*3); i+=3 )); do
-		for ((j=1; j <= anchoTerminalBloques; j++)); do
+		for ((j=1; j <= anchoTerminalBloques; j++)); do	#La línea de memoria empieza en 1
 			memoriaTruncada[$i,$j]=${memoriaSegunNecesidades[$ultimaPosMemEmplazada,$MEM_TOSTRING]}
 			
 			if [[ ${memoriaSegunNecesidades[$ultimaPosMemEmplazada,$MEM_INDICE]} -ne $ultimoIndiceEncontrado ]];then
@@ -1331,7 +1331,7 @@ truncarMemoria(){
 				#Fila de los nombres
 				if [[ $ultimoIndiceEncontrado -eq $MEM_HUECO_VACIO ]]; then #Si el hueco está vacío
 					memoriaTruncada[$((i-1)),$j]="---"
-				else
+				else	#Nombre del proceso
 					memoriaTruncada[$((i-1)),$j]=${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
 				fi
 
@@ -1484,7 +1484,7 @@ comprobarSiElProcesoEnCPUHaTerminado(){
 		procesos[$procesoCPU,$P_ESTADO]=$STAT_FIN
 		procesoCPU=0
 	fi
-	procesos[$procesoCPU,$P_TRETORNO]=$tiempoEjecucion
+	procesos[$procesoCPU,$P_TRETORNO]=$tiempoEjecucion 
 }
 
 # Nombre: truncarBarraCPU
@@ -1499,16 +1499,19 @@ truncarBarraCPU(){
 	declare -a barraMemoriaColor #Array que contiene los string a imprimir, generado en: colorearBarraMemoria. En este caso hemos trabajado con 2 arrays y no con uno, porque soy bobo.
 									#PD: no es lo más eficiente, ya que se colorea cada vez, quizá debería hacerlo en el momento, como con la memoria? Dunno m8
 	local -i i
-	local -j j
-	local -i ultimaPosMemEmplazada=1
+	local -i j
+	local -i ultimaPosMemEmplazada=0
 	local    ultimoIndiceEncontrado=-1
 	echo "Truncando barra memoria"
 	colorearBarraMemoria
 
 	for (( i=1; i<= (altoLineaTiempoTruncada*3); i+=3 )); do
-		for ((j=1; j <= anchoTerminalBloques; j++)); do
+		for ((j=0; j < anchoTerminalBloques; j++)); do	#La barra de CPU empieza en 0
+
+			#Volcamos la fila intermedia (barras de color)
 			lineaTiempoTruncada[$i,$j]=${barraMemoriaColor[$ultimaPosMemEmplazada]}
-			
+
+			#Si no coincide con la última posición: Significa que hay otro proceso -> añadimos ref y tiempo en las líneas.
 			if [[ ${lineaEstadoCPU[$ultimaPosMemEmplazada]} -ne $ultimoIndiceEncontrado ]];then
 				ultimoIndiceEncontrado=${lineaEstadoCPU[$ultimaPosMemEmplazada]}
 				
@@ -1526,7 +1529,7 @@ truncarBarraCPU(){
 					lineaTiempoTruncada[$((i+1)),$j]="$ultimaPosMemEmplazada "		#que haciendolo, un saludo: Jorge (09/03/2020 - 13:17)
 				fi
 			else
-				lineaTiempoTruncada[$((i-1)),$j]="   "		 #No hay proceso -> Vacío
+				lineaTiempoTruncada[$((i-1)),$j]="   "		 #No hay cambio de proceso-> Vacío
 				lineaTiempoTruncada[$((i+1)),$j]="   "		 #No hay dirección al no haber cambio de proceso -> Vacío
 			fi
 			((ultimaPosMemEmplazada++))
@@ -1547,9 +1550,9 @@ colorearBarraMemoria(){
 		else
 			colorProceso=$_WHITE
 		fi
-		barraMemoriaColor+=("${colorProceso}   ${NC}") #3 espacios porque es el ancho del proceso que desea el profesor
+		barraMemoriaColor+=("${colorProceso} * ${NC}") #3 espacios porque es el ancho del proceso que desea el profesor
 	done
-
+	
 }
 
 # Nombre: dibujarEstadoCPU
@@ -1569,17 +1572,9 @@ dibujarEstadoCPU(){
 		altoLineaTiempoTruncada=$(( ( tiempoEjecucion/anchoTerminalBloques ) + 1 ))
 	fi
 
-	#TODO: Pregunta: Como hacer la línea de CPU
-
-	#TODO Igual hacerlo a tiempoEjecucion-1 si no queremos que aparezca el proceso hasta el final
-	for((i=0;i<tiempoEjecucion;i++)); do
-		echo -n "${lineaEstadoCPU[$i]}|"
-	done
-
-	echo ""
 	truncarBarraCPU
 	for (( i= 0; i< 3*altoLineaTiempoTruncada; i++ ));do
-		for (( j=0; j<anchoTerminalBloques ; j++));do
+		for (( j=0; j<=anchoTerminalBloques ; j++));do
 			echo -en "${lineaTiempoTruncada[$i,$j]}"
 		done
 		echo ""
@@ -1635,14 +1630,13 @@ ejecucion(){
 		done
 		
 		#Comprobaciones de CPU
-		#Si no hay ningún proceso en CPU, o el proceso está terminado && hay al menos 1 proc en mem.
+		#Si no hay ningún proceso en CPU, o el proceso ha terminado && hay al menos 1 proc en mem.
 		if [[ $procesoCPU -eq 0 ]] && [[ $memoriaLibre -lt $tamMemoria ]]; then
 			aniadirSiguienteProcesoACPU
 			printf "${L_CYAN}%s ${procesos[$procesoCPU,$P_COLORLETRA]}%s ${L_CYAN}%s${NC} %d ${L_CYAN}%s\n${NC}" "El proceso" "${procesos[$procesoCPU,$P_NOMBRE]}" "ha sido introducido en la CPU en el instante" "$tiempoEjecucion" "y ahora se está ejecutando"
 			haHabidoUnCambio=1
 		fi
 
-		ejecutarUnCiloDeCPU
 		calcularPosTodosProcesos
 
 		#Si ha habido un cambio/evento en el estado de algún proceso -> Salida por pantalla
@@ -1658,6 +1652,7 @@ ejecucion(){
 			breakpoint "Fin del loop $tiempoEjecucion del WHILE"
 			echo -------------------------------------------------------------------
 		fi
+		ejecutarUnCiloDeCPU
 	done
 
 	pantallaFinal(){
@@ -1690,7 +1685,7 @@ ejecucion(){
 
 #main
 main(){
-	comprobacionDirectorio stringDeBúsqueda, no tiene valor alguno
+	
 	mostrarPantallaInformacion
 	cargaDatos
 	escribeDatos
@@ -1719,7 +1714,7 @@ main(){
 	ejecucion 
 }
 
-
+comprobacionDirectorio stringDeBúsqueda, no tiene valor alguno
 global #Carga las variables globales y ejecuta el main -> Está hecho así para poder minimizar todas las variables de global en el outline de VSCODE
 convertirFicheroColorEnBlancoNegro "informeDebug.txt" "informeDebugBN.txt" "false"
 scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
