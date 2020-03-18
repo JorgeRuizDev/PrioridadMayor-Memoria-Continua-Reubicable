@@ -121,8 +121,8 @@ declare -r MEM_TOSTRING=1
 	#Declares de los contenidos por defecto de la MEMORIA
 declare -r MEM_HUECO_VACIO="null"
 	#Valores que se imprimen por pantalla
-declare -r MEM_STRING_HUECO_VACIO="$_WHITE${WHITE}XXX${_DEFAULT}"
-declare -r MEM_STRING_HUECOSINCOLOR="_*_"	#Se colorea con el color del proceso
+declare -r MEM_STRING_HUECO_VACIO="$_WHITE${WHITE}[_]${_DEFAULT}"
+declare -r MEM_STRING_HUECOSINCOLOR="[^]"	#Se colorea con el color del proceso
 
 #	######################################
 #	Declares 2020:
@@ -505,13 +505,6 @@ cargaDatos(){
 		fin_programa
 	;;
 	esac
-	#copia en la columna 6 el tiempo de ejecución. La columna 6 se usa como T.Ejec restante
-	
-	#TODO: Añádir en esta zona: Asignación de PID; Asignación Color
-	#		Igual añadir una función que asigne el T_restante / inicialice. 
-	for ((i=1;i<=$numProc;i++)) do
-		procesos[$i,$P_TRESTANTE]=${procesos[$i,$P_TEJECUCION]}
-	done
 }
 
 # Nombre: menuAlgoritmo
@@ -793,6 +786,37 @@ datosAleatorios(){
 escribeDatos(){
 	local -i i
 	local -i j
+
+	# Nombre: ordenarProcesosNombre
+	# Descripción: Reordena toda la tabla de procesos por nombre.
+	# Detalles: función escribeDatos(), en el curso 19/20 se exige que el fichero
+	#	tenga los datos ordenados por nombre de proceso, para que sea más simple añadir nuevos datos
+	#	como no es necesario almacenar el nombre, igual también se podría haber eliminado, pero bueno (es un cambio necesario, y paso de hacer lo otro)
+	# Date: 17/03/2020
+	ordenarProcesosNombre(){
+		local -i i
+		local -i j
+		local -i minLlegada	#índice al proceso que es menor en llegada
+		
+		for((i=1;i<numProc;i++)) do
+			minLlegada=$i
+			for((j=i+1;j<=numProc;j++)) do
+				if [[ ${procesos[$j,$P_NOMBRE]} < ${procesos[$minLlegada,$P_NOMBRE]} ]]; then #compara el tiempo de llegada
+						minLlegada=$j
+				fi
+			done
+			#intercambio de elementos
+			for((k=1;k<=6;k++)) do
+				aux=${procesos[$i,$k]}
+				procesos[$i,$k]=${procesos[$minLlegada,$k]}	
+				procesos[$minLlegada,$k]=$aux
+			done
+		done
+	}
+
+	#Ordenanmos los procesos por nombre para la ejecución
+	ordenarProcesosNombre
+
 	echo "Tamaño Memoria:$tamMemoria" > datos.txt
 	echo "Apropiativo:$opcionApropiativo" >> datos.txt
 	echo "Estatico:$opcionEstatico" >> datos.txt
@@ -805,6 +829,9 @@ escribeDatos(){
 		done
 		echo  >> datos.txt
 	done
+
+	#Ordenamos de nuevo para la ejecución:
+	ordenarProcesos
 }
 
 # Nombre: ordenarProcesos
@@ -953,6 +980,8 @@ eliminarCola(){
 # 	de esta función cuando: Se añade un proceso en mem -> se reubica. Como no hay tiempo y no se valora, se recalcula en cada bucle
 #	la de todos los procesos en memoria. 
 # @Param $1: Índice del proceso a recalcular
+#
+#NOTA: Sin uso en todo el programa, no había presupuesto, posiblemente nunca se haya probado.
 calcularPosProceso(){
 	
 	for (( i=1; i<=tamMemoria; i++)); do
@@ -1012,8 +1041,7 @@ nularColumna(){
 		done
 	done
 
-	procesos[$i,$P_POSINI]=$valorNull
-	procesos[$i,$P_POSFIN]=$valorNull
+
 }
 
 # Nombre: vaciarMemoria
@@ -1060,7 +1088,7 @@ aniadirProcesoAMemoria(){
 				#añadimos el indice
 			memoriaSegunNecesidades[$i,$MEM_INDICE]=$1
 				#Añadimos la salida por pantalla con COLOR 
-			memoriaSegunNecesidades[$i,$MEM_TOSTRING]="${procesos[$1,${P_COLOR}]}$MEM_STRING_HUECOSINCOLOR${_DEFAULT}"
+			memoriaSegunNecesidades[$i,$MEM_TOSTRING]="${procesos[$1,${P_COLOR}]}${procesos[$1,${P_COLORLETRA}]}$MEM_STRING_HUECOSINCOLOR${_DEFAULT}"
 
 			if [[ $i -gt $tamMemoria  ]];then
 				breakpoint "Amigo, tenemos un problemón en la función aniadirAMemoria(), has añadido a más memoria de la existente || PROGRAMACIÓN DEFENSIVA"
@@ -1202,7 +1230,7 @@ reubicarProcesos(){
 			#añadimos el indice
 			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_INDICE]=$indice
 			#Añadimos la salida por pantalla con COLOR
-			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]="${procesos[$indice,$P_COLOR]}$MEM_STRING_HUECOSINCOLOR${NC}"
+			memoriaSegunNecesidades[$ultimaPosicionMemoria,$MEM_TOSTRING]="${procesos[$indice,$P_COLOR]}${procesos[$indice,$P_COLORLETRA]}$MEM_STRING_HUECOSINCOLOR${NC}"
 			
 			if (( ultimaPosicionMemoria > tamMemoria)); then 
 				breakpoint "Colega, tenemos un problemón en reubicarProcesos(), te has salido del array de memoria"
@@ -1443,7 +1471,7 @@ aniadirSiguienteProcesoACPU(){
 	#Guardamos el índice del proceso y actualizamos su estado
 	procesoCPU=$procesoConPrioridadMasAlta
 	procesos[$procesoCPU,$P_ESTADO]="$STAT_ENCPU"
-	
+	procesos[$procesoCPU,$P_TRESTANTE]=${procesos[$procesoCPU,$P_TEJECUCION]}
 }
 
 # Nombre: ejecutarUnCicloDeCPU
@@ -1543,14 +1571,17 @@ truncarBarraCPU(){
 
 colorearBarraMemoria(){
 	local colorProceso
+	local colorLetraProceso
 	echo "Coloreando barra memoria"
 	for ((i=0; i< tiempoEjecucion; i++)); do
 		if [[ ${lineaEstadoCPU[$i]} -ne 0 ]]; then
 			colorProceso=${procesos[${lineaEstadoCPU[$i]},$P_COLOR]}
+			colorLetraProceso=${procesos[${lineaEstadoCPU[$i]},$P_COLORLETRA]}
 		else
 			colorProceso=$_WHITE
+			colorLetraProceso=$WHITE
 		fi
-		barraMemoriaColor+=("${colorProceso} * ${NC}") #3 espacios porque es el ancho del proceso que desea el profesor
+		barraMemoriaColor+=("${colorProceso}${colorLetraProceso}[ ]${NC}") #3 espacios porque es el ancho del proceso que desea el profesor
 	done
 	
 }
@@ -1640,9 +1671,9 @@ ejecucion(){
 		calcularPosTodosProcesos
 
 		#Si ha habido un cambio/evento en el estado de algún proceso -> Salida por pantalla
-		if [[ $haHabidoUnCambio -eq 1 ]]; then
-
-			echo -e "${B_WHITE}Instante: $((tiempoEjecucion-1)) | P. más alta: $priorMax | P. más baja: $priorMin ${NC}"
+		if [[ $haHabidoUnCambio -eq 1 ]] || [[ $tiempoEjecucion -eq 0 ]]; then
+			echo "════════════════════════════════════════════════════════════════════════════"
+			echo -e "${B_WHITE}Instante: $tiempoEjecucion | P. más alta: $priorMax | P. más baja: $priorMin ${NC}"
 
 			imprimirTablaPredeterminada
 			dibujarMemoria
@@ -1650,13 +1681,17 @@ ejecucion(){
 			imprimirLCyan "Número de procesos ejecutados $procEjecutados/$numProc"
 
 			breakpoint "Fin del loop $tiempoEjecucion del WHILE"
-			echo -------------------------------------------------------------------
+			echo "════════════════════════════════════════════════════════════════════════════"
 		fi
 		ejecutarUnCiloDeCPU
 	done
 
 	pantallaFinal(){
 		local -i
+
+		clear
+		echo "Pantalla Final:"
+
 		for ((i=1; i<=numProc; i++));do
 			tEjecAcumulado=$(( tEjecAcumulado + ${procesos[$i,3]}))
 			tEsperaAcumulado=$(( tEsperaAcumulado + ${procesos[$i,7]}))
@@ -1667,7 +1702,8 @@ ejecucion(){
 		tEsperaMedio=$(echo "scale=2;$tEsperaAcumulado/$procEjecutados" | bc -l)
 		tRetornoMedio=$(echo "scale=2;$tRetornoAcumulado/$procEjecutados" | bc -l)
 
-		clear
+		#FIXME: Esto no se muestra bien :(	
+
 		imprimirTablaPredeterminada
 		echo "════════════════════════════════════════════════════════════════════════════"
 		echo "Tiempo de ejecución Total: $tiempoEjecucion"
@@ -1678,7 +1714,10 @@ ejecucion(){
 		imprimirLCyan "Tiempo de retorno medio: $BOLD$tRetornoMedio"
 		dibujarMemoria
 		dibujarEstadoCPU
+
+		read -ers -p "Pulse [enter] para continuar"
 	}
+
 	pantallaFinal
 }
 
@@ -1691,7 +1730,7 @@ main(){
 	escribeDatos
 	ordenarProcesos
 	inicializarArrays
-	nularColumna "$P_TRETORNO" "$P_POSINI" "$P_POSFIN" "$P_ESTADO"
+	nularColumna "$P_TRETORNO" "$P_POSINI" "$P_POSFIN" "$P_ESTADO" "$P_TRESTANTE"
 	clear
 	imprimirTabla 1 2 3 4 5
 	
@@ -1700,8 +1739,7 @@ main(){
 	echo -e "
 	╔═══════════════════════════════════════╗
 	║					║
-	║${L_GREEN} Tamaño Partición: ${NC}${B_BLUE}$tamPart${NC}			║
-	║${L_GREEN} Número de Particiones: ${NC}${B_BLUE}$numeroParticiones${NC}		║
+	║${L_GREEN} Tamaño de Memoria: ${NC}${B_BLUE}$tamMemoria${NC}		║
 	║${L_GREEN} Número de Procesos: ${NC}${B_BLUE}$numProc ${NC}		║
 	║${L_GREEN} Prioridad Mínima: ${NC}${B_BLUE}$priorMin${NC}			║
 	║${L_GREEN} Prioridad Máxima: ${NC}${B_BLUE}$priorMax${NC}			║
