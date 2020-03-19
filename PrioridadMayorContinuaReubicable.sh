@@ -684,6 +684,38 @@ datosManualProcesos(){
 	ordenarProcesos # -> se reordena la tabla mediante el tiempo de llegada. Se hace en este punto para saber la pos. del proceso
 }
 
+# Nombre: selectorFichero
+# Descripción: muestra por pantalla los ficheros correspondientes a la secuencia de escape $1
+#	y devuelve el string del fichero obtenido
+# Nota: Esta función utiliza un fichero temporal que se almacena en /tmp
+#	Se requiere de la función mktemp que no es POSIX. Está instalada en muchos sitemas, pero ojo cuidado!
+#
+# --NO------@Param $1: secuencia de escape: por ejemplo $1='*.txt' muestra sólo los ficheros que terminen con 'txt', es el resultado de un ls
+# @Param $2: variable en la que vamos a almacenar el string de resultado
+# GLOBAL: los valores se asignan también a $nomFile, ya que eval no permite hacer return de un string con espacios
+#		Paso de comerme la cabeza, es una chapuza pero no hay otra, bash tiene muchas limitaciones en este aspecto.
+# Date: 19/03/2020
+selectorFichero(){
+	local tmp=$(mktemp)
+	local -i seleccion
+	local -i nFicheros
+	local stringReturn
+	imprimirLCyan "Seleccione el archivo que desea leer:"
+	ls -p $1 | grep -v / | tee "$tmp" | cat -n
+
+	nFicheros=$(wc -l < "$tmp")
+	scanfNumMinMax "Valor entre 0 y $nFicheros: 0 permite introducir un nombre de forma manual: " "seleccion" 0 $nFicheros
+
+	if [[ $seleccion = 0 ]]; then
+		eval ${2}="null"
+	else
+		stringReturn=$(sed -n ${seleccion}p $tmp)
+		rm "$tmp"
+		nomFile="${stringReturn}"
+		#eval "${2}"="${stringReturn}"
+	fi
+}
+
 # Nombre: datosFichero
 # Descripcion: Opción 2: Por datos. Recoge todos los datos a través del fichero
 datosFichero(){
@@ -695,22 +727,27 @@ datosFichero(){
 	local numLineas
 	scanfSiNo "Por defecto se usa datos.txt ¿Quieres cambiarlo? [s/n]: " respuesta
 	if [ "$respuesta" = "s" ]; then
-		scanfString "Nombre del fichero: " nomFile
+
+		selectorFichero "*.txt" "nomFile" #Muestra los ficheros que terminen en .txt
+
+		if [[ $nomFile = "null" ]]; then
+			scanfString "Nombre del fichero: " nomFile
+		fi
 	fi
-	if [ -f $nomFile ]; then #si el fichero existe
+	if [[ -f "$nomFile" ]]; then #si el fichero existe
 		imprimirLCyan "Cargando datos desde $nomFile"
 		sleep 1
-		numLineas=`cat $nomFile | wc -l`
+		numLineas=`cat "$nomFile" | wc -l`
 		#sed -n 1p coge la linea 1 y cut -d ":" -f 2 la columna 2 delimitado por :
-		tamMemoria=`sed -n 1p $nomFile | cut -d ":" -f 2`
-		opcionApropiativo=`sed -n 2p $nomFile | cut -d ":" -f 2`
-		opcionEstatico=`sed -n 3p $nomFile | cut -d ":" -f 2`
-		priorMin=`sed -n 4p $nomFile | cut -d ":" -f 2`
-		priorMax=`sed -n 5p $nomFile | cut -d ":" -f 2`
+		tamMemoria=`sed -n 1p "$nomFile" | cut -d ":" -f 2`
+		opcionApropiativo=`sed -n 2p "$nomFile" | cut -d ":" -f 2`
+		opcionEstatico=`sed -n 3p "$nomFile" | cut -d ":" -f 2`
+		priorMin=`sed -n 4p "$nomFile" | cut -d ":" -f 2`
+		priorMax=`sed -n 5p "$nomFile" | cut -d ":" -f 2`
 		for (( i=1,k=7; k<=numLineas; i++,k++)) do
 			((numProc++))
 			for (( j=1; j<=numCol; j++ )) do
-				procesos[$i,$j]=`sed -n ${k}p $nomFile| cut -d "	" -f $j`
+				procesos[$i,$j]=`sed -n ${k}p "$nomFile"| cut -d "	" -f $j`
 			done
 		done
 		comprobarDatosFichero
@@ -1005,7 +1042,7 @@ calcularPosTodosProcesos(){
 		if [[ $procesoActual -ne $ultimoProEncontrado ]] && [[ $procesoActual != "$MEM_HUECO_VACIO" ]]; then #Está en memoria
 			ultimoProEncontrado=$procesoActual
 			procesos[$procesoActual,$P_POSINI]=$((i-1))
-			procesos[$procesoActual,$P_POSFIN]=$((i - 1 + ${procesos[$procesoActual,$P_TAMANIO]}))
+			procesos[$procesoActual,$P_POSFIN]=$((i - 2 + ${procesos[$procesoActual,$P_TAMANIO]}))
 		fi
 	done
 }
@@ -1685,7 +1722,7 @@ ejecucion(){
 			imprimirLCyan "Número de procesos ejecutados $procEjecutados/$numProc"
 
 			#breakpoint "Fin del loop $tiempoEjecucion del WHILE"
-			read -ers -p "Pulse [enter] para continuar"
+			read -ers -p "Pulse [enter] para continuar "
 			echo "════════════════════════════════════════════════════════════════════════════"
 		fi
 		ejecutarUnCiloDeCPU
@@ -1694,15 +1731,12 @@ ejecucion(){
 	pantallaFinal(){
 		local -i
 
-		#clear #FIXME: Añadir CLEAR
-		echo "Pantalla Final:"
-
 		for ((i=1; i<=numProc; i++));do
 			tEjecAcumulado=$(( tEjecAcumulado + ${procesos[$i,3]}))
 			tEsperaAcumulado=$(( tEsperaAcumulado + ${procesos[$i,7]}))
 			tRetornoAcumulado=$(( tRetornoAcumulado + ${procesos[$i,8]}))
 		done
-		echo "Pantalla Final 2:"
+		echo "════════════════════════════════════════════════════════════════════════════"
 		tEjecMedio=$(echo "scale=2;$tEjecAcumulado/$procEjecutados" | bc -l)
 		tEsperaMedio=$(echo "scale=2;$tEsperaAcumulado/$procEjecutados" | bc -l)
 		tRetornoMedio=$(echo "scale=2;$tRetornoAcumulado/$procEjecutados" | bc -l)
@@ -1723,7 +1757,9 @@ ejecucion(){
 
 	pantallaFinal 
 }
-
+abrirInforme(){
+	echo "Qué desea visualizar?"
+}
 
 #main
 main(){
@@ -1742,7 +1778,7 @@ main(){
 	echo -e "
 	╔═══════════════════════════════════════╗
 	║					║
-	║${L_GREEN} Tamaño de Memoria: ${NC}${B_BLUE}$tamMemoria${NC}		║
+	║${L_GREEN} Tamaño de Memoria: ${NC}${B_BLUE}$tamMemoria${NC}			║
 	║${L_GREEN} Número de Procesos: ${NC}${B_BLUE}$numProc ${NC}		║
 	║${L_GREEN} Prioridad Mínima: ${NC}${B_BLUE}$priorMin${NC}			║
 	║${L_GREEN} Prioridad Máxima: ${NC}${B_BLUE}$priorMax${NC}			║
@@ -1758,11 +1794,12 @@ main(){
 comprobacionDirectorio stringDeBúsqueda, no tiene valor alguno
 global #Carga las variables globales y ejecuta el main -> Está hecho así para poder minimizar todas las variables de global en el outline de VSCODE
 convertirFicheroColorEnBlancoNegro "informeDebug.txt" "informeDebugBN.txt" "false"
+abrirInforme
 scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
 if [ "$abrirInforme" = "s" ]; then
 	less -R informeDebug.txt
 fi
-#FIXME:	Las direcciones empiezan en 1 y termiann en tamMemo, y no en 0 y tamMemo -1
+
 
 
 #Cosas que no funcionan #FIXME/TODO:
