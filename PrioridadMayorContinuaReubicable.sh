@@ -859,7 +859,7 @@ ordenarProcesos(){
 			fi
 		done
 		#intercambio de elementos
-		for((k=1;k<=6;k++)) do
+		for((k=1;k<=11;k++)) do
 			aux=${procesos[$i,$k]}
 			procesos[$i,$k]=${procesos[$minLlegada,$k]}	
 			procesos[$minLlegada,$k]=$aux
@@ -877,7 +877,7 @@ ordenarProcesos(){
 #	He decidido hacer esto por dos razones: 1º: Puedo reutilizar la tabla en la entrada de datos con 4 columnas 2º: Puedo poner la cabecera fija cómodamente.
 imprimirTablaPredeterminada(){
 	echo ""
-	echo "    │   D.INICIAL.  │    TIEMPO    │   MEMO  │    OTROS DATOS   │"
+	echo "    │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │"
 	echo "┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤"
 	imprimirTabla "$P_NOMBRE" "$P_TLLEGADA" "$P_TEJECUCION" "$P_TAMANIO" "$P_PRIORIDAD" "$P_TESPERA" "$P_TRETORNO" "$P_TRESTANTE" "$P_POSINI" "$P_POSFIN" "$P_ESTADO"
 	echo "└───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘"
@@ -938,9 +938,7 @@ convertirFicheroColorEnBlancoNegro(){
 inicializarArrays(){
 	local -i i
     cola[1]=0
-	for((i=1;i<=numProc;i++)) do #ponemos a 0 el tiempo de espera de todos los procesos
-		procesos[$i,$P_TESPERA]=0
-	done
+
 	#inicializamos de datos predeterminados los de la fila 0, fila usada como indice en caso de que una memoria o cpu este vacio
 	procesos[0,$P_TLLEGADA]=0
 	procesos[0,$P_TAMANIO]=0
@@ -961,6 +959,7 @@ anadirCola(){
     cola[$tamCola]=$1
 	#Actualizamos el estado del proceso a "En cola"
 	procesos[$1,$P_ESTADO]=$STAT_COLA
+	procesos[$i,$P_TESPERA]=0
 }
 
 # Nombre: eliminarCola
@@ -1005,8 +1004,8 @@ calcularPosTodosProcesos(){
 		procesoActual=${memoriaSegunNecesidades[$i,$MEM_INDICE]}
 		if [[ $procesoActual -ne $ultimoProEncontrado ]] && [[ $procesoActual != "$MEM_HUECO_VACIO" ]]; then #Está en memoria
 			ultimoProEncontrado=$procesoActual
-			procesos[$procesoActual,$P_POSINI]=$i
-			procesos[$procesoActual,$P_POSFIN]=$((i+${procesos[$procesoActual,$P_TAMANIO]}))
+			procesos[$procesoActual,$P_POSINI]=$((i-1))
+			procesos[$procesoActual,$P_POSFIN]=$((i - 1 + ${procesos[$procesoActual,$P_TAMANIO]}))
 		fi
 	done
 }
@@ -1365,9 +1364,9 @@ truncarMemoria(){
 
 				#Fila de las posiciones
 				if [[ $ultimaPosMemEmplazada -lt 10 ]]; then
-					memoriaTruncada[$((i+1)),$j]="$ultimaPosMemEmplazada  "	#Metemos espacios al final para que no se descuadre, si el tamaño es >=100, se descuadra
+					memoriaTruncada[$((i+1)),$j]="$((ultimaPosMemEmplazada-1))  "	#Metemos espacios al final para que no se descuadre, si el tamaño es >=100, se descuadra
 				else															#Sería poner un elif con el tamaño del int, pero me da pereza, pd: he tardado más escribiendo esto
-					memoriaTruncada[$((i+1)),$j]="$ultimaPosMemEmplazada "		#que haciendolo, un saludo: Jorge (09/03/2020 - 13:17)
+					memoriaTruncada[$((i+1)),$j]="$((ultimaPosMemEmplazada-1)) "		#que haciendolo, un saludo: Jorge (09/03/2020 - 13:17)
 				fi
 			else
 				memoriaTruncada[$((i-1)),$j]="   "		 #No hay proceso -> Vacío
@@ -1385,6 +1384,9 @@ truncarMemoria(){
 
 }
 
+# Nombre: dibujarMemoria
+# Descripción: Muestra por pantalla la memoria truncada
+# @Param: $1 string de control: si el string es "mostrarStatsMemoria", se muestra por pantalla el uso de memoria y el 
 dibujarMemoria(){
 	local -i memoriaEnUso
 	local memoriaEnUsoPorciento #Es un string al ser float
@@ -1400,19 +1402,18 @@ dibujarMemoria(){
 		altoMemoriaTruncada=$(( ( tamMemoria/anchoTerminalBloques ) + 1 ))
 	fi
 
-	#Stats mememoria: 
-	memoriaEnUso=$((tamMemoria-memoriaLibre))
-	memoriaEnUsoPorciento=$(echo "scale=2;100*$memoriaEnUso/$tamMemoria" | bc -l) 
-
-	imprimirLCyan "Uso de memoria: $memoriaEnUso/$tamMemoria ($memoriaEnUsoPorciento%) -> Memoria libre: $memoriaLibre"
-
-	if [[ $DEBUG_ENABLE == true ]]; then #Imprime los índices de memoria para mejorar visualización
-		for((i=1;i<=tamMemoria;i++)); do
-			break
-			echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
-		done
-		echo "" #salto de línea
+	#Stats mememoria:
+	if [[ $1 = "mostrarStatsMemoria" ]]; then
+		memoriaEnUso=$((tamMemoria-memoriaLibre))
+		memoriaEnUsoPorciento=$(echo "scale=2;100*$memoriaEnUso/$tamMemoria" | bc -l) 
+		imprimirLCyan "Uso de memoria: $memoriaEnUso/$tamMemoria ($memoriaEnUsoPorciento%) -> Memoria libre: $memoriaLibre"
 	fi
+
+	#for((i=1;i<=tamMemoria;i++)); do #Imprime los índices de memoria para mejorar el flujo
+	#	break
+	#	echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
+	#done
+	#echo "" #salto de línea
 
 	truncarMemoria 	#Imprimimos la memoria truncada
 	for (( i= 0; i< 3*altoMemoriaTruncada; i++ ));do
@@ -1524,27 +1525,27 @@ comprobarSiElProcesoEnCPUHaTerminado(){
 #		Podría hacerse en una misma función, pero los parámetros en Bash son un dolor, y paso de perder el tiempo haciendo un código de muy alta calidad.
 #			
 truncarBarraCPU(){
-	declare -a barraMemoriaColor #Array que contiene los string a imprimir, generado en: colorearBarraMemoria. En este caso hemos trabajado con 2 arrays y no con uno, porque soy bobo.
+	declare -a barraTiempoColor #Array que contiene los string a imprimir, generado en: colorearBarraMemoria. En este caso hemos trabajado con 2 arrays y no con uno, porque soy bobo.
 									#PD: no es lo más eficiente, ya que se colorea cada vez, quizá debería hacerlo en el momento, como con la memoria? Dunno m8
 	local -i i
 	local -i j
 	local -i ultimaPosMemEmplazada=0
 	local    ultimoIndiceEncontrado=-1
-	echo "Truncando barra memoria"
-	colorearBarraMemoria
+
+	colorearBarraTiempo
 
 	for (( i=1; i<= (altoLineaTiempoTruncada*3); i+=3 )); do
 		for ((j=0; j < anchoTerminalBloques; j++)); do	#La barra de CPU empieza en 0
 
 			#Volcamos la fila intermedia (barras de color)
-			lineaTiempoTruncada[$i,$j]=${barraMemoriaColor[$ultimaPosMemEmplazada]}
+			lineaTiempoTruncada[$i,$j]=${barraTiempoColor[$ultimaPosMemEmplazada]}
 
 			#Si no coincide con la última posición: Significa que hay otro proceso -> añadimos ref y tiempo en las líneas.
 			if [[ ${lineaEstadoCPU[$ultimaPosMemEmplazada]} -ne $ultimoIndiceEncontrado ]];then
 				ultimoIndiceEncontrado=${lineaEstadoCPU[$ultimaPosMemEmplazada]}
 				
 				#Fila de los nombres
-				if [[ $ultimoIndiceEncontrado -eq 0 ]]; then #Si el hueco está vacío
+				if [[ $ultimoIndiceEncontrado -eq 0 ]]; then #Si el hueco está vacío (al no haber proceso, CPU vacía en ese instante)
 					lineaTiempoTruncada[$((i-1)),$j]="   "
 				else
 					lineaTiempoTruncada[$((i-1)),$j]=${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
@@ -1560,19 +1561,20 @@ truncarBarraCPU(){
 				lineaTiempoTruncada[$((i-1)),$j]="   "		 #No hay cambio de proceso-> Vacío
 				lineaTiempoTruncada[$((i+1)),$j]="   "		 #No hay dirección al no haber cambio de proceso -> Vacío
 			fi
+
 			((ultimaPosMemEmplazada++))
 
-			if [[ $ultimaPosMemEmplazada -gt $tiempoEjecucion ]];then break; fi
+			if [[ $ultimaPosMemEmplazada -gt $tiempoEjecucion ]];then break; fi	#Se ha emplazado toda la memoria
 		done
 			ultimoIndiceEncontrado=-1 #reseteo para que se imprima siempre en cada línea la dirección y el proceso
 	done
 	
 }
 
-colorearBarraMemoria(){
+colorearBarraTiempo(){
 	local colorProceso
 	local colorLetraProceso
-	echo "Coloreando barra memoria"
+
 	for ((i=0; i< tiempoEjecucion; i++)); do
 		if [[ ${lineaEstadoCPU[$i]} -ne 0 ]]; then
 			colorProceso=${procesos[${lineaEstadoCPU[$i]},$P_COLOR]}
@@ -1581,7 +1583,7 @@ colorearBarraMemoria(){
 			colorProceso=$_WHITE
 			colorLetraProceso=$WHITE
 		fi
-		barraMemoriaColor+=("${colorProceso}${colorLetraProceso}[ ]${NC}") #3 espacios porque es el ancho del proceso que desea el profesor
+		barraTiempoColor+=("${colorProceso}${colorLetraProceso}[=]${NC}") #3 espacios porque es el ancho del proceso que desea el profesor
 	done
 	
 }
@@ -1644,6 +1646,7 @@ ejecucion(){
 		for((i=1;i<=numProc;i++)) do
 			if [[ ${procesos[$i,$P_TLLEGADA]} -eq "$tiempoEjecucion" ]]; then
 				anadirCola $i
+				
 				printf "${L_MAGENTA}%s ${procesos[$i,$P_COLORLETRA]}%s ${L_MAGENTA}%s ${NC}%d\n" "El proceso" "${procesos[$i,$P_NOMBRE]}" "ha entrado en el sistema en el instante" "$tiempoEjecucion"
 				haHabidoUnCambio=1
 			fi
@@ -1652,8 +1655,10 @@ ejecucion(){
 		#Volcamos toda la cola en memoria (si cabe)
 		while (( tamCola >= 1 )); do
 			if [[ ${procesos[${cola[1]},$P_TAMANIO]} -le $memoriaLibre ]]; then
-				printf "${L_GREEN}%s ${procesos[${cola[1]},$P_COLORLETRA]}%s ${L_GREEN}%s ${NC}%d\n" "El proceso" "${procesos[${cola[1]},$P_NOMBRE]}"  "ha sido introducido en memoria en el instante" "$tiempoEjecucion"	
-				aniadirProcesoAMemoria "${cola[1]}"
+				local -i procesoMem="${cola[1]}" #lo guardamos para poder hacer el printf tras añadir el procesos: Meramente estético (por si hay reubicabilidad, que salga después del mensaje)
+				aniadirProcesoAMemoria "$procesoMem"
+				printf "${L_GREEN}%s ${procesos[$procesoMem,$P_COLORLETRA]}%s ${L_GREEN}%s ${NC}%d\n" "El proceso" "${procesos[$procesoMem,$P_NOMBRE]}"  "ha sido introducido en memoria en el instante" "$tiempoEjecucion"	
+				
 				haHabidoUnCambio=1
 			else
 				break
@@ -1673,14 +1678,14 @@ ejecucion(){
 		#Si ha habido un cambio/evento en el estado de algún proceso -> Salida por pantalla
 		if [[ $haHabidoUnCambio -eq 1 ]] || [[ $tiempoEjecucion -eq 0 ]]; then
 			echo "════════════════════════════════════════════════════════════════════════════"
-			echo -e "${B_WHITE}Instante: $tiempoEjecucion | P. más alta: $priorMax | P. más baja: $priorMin ${NC}"
-
 			imprimirTablaPredeterminada
-			dibujarMemoria
-			dibujarEstadoCPU
+			echo -e "${B_WHITE}Instante: $tiempoEjecucion | P. más alta: $priorMax | P. más baja: $priorMin ${NC}"
+			dibujarMemoria "mostrarStatsMemoria"
+			dibujarEstadoCPU 
 			imprimirLCyan "Número de procesos ejecutados $procEjecutados/$numProc"
 
-			breakpoint "Fin del loop $tiempoEjecucion del WHILE"
+			#breakpoint "Fin del loop $tiempoEjecucion del WHILE"
+			read -ers -p "Pulse [enter] para continuar"
 			echo "════════════════════════════════════════════════════════════════════════════"
 		fi
 		ejecutarUnCiloDeCPU
@@ -1689,7 +1694,7 @@ ejecucion(){
 	pantallaFinal(){
 		local -i
 
-		clear
+		#clear #FIXME: Añadir CLEAR
 		echo "Pantalla Final:"
 
 		for ((i=1; i<=numProc; i++));do
@@ -1697,12 +1702,10 @@ ejecucion(){
 			tEsperaAcumulado=$(( tEsperaAcumulado + ${procesos[$i,7]}))
 			tRetornoAcumulado=$(( tRetornoAcumulado + ${procesos[$i,8]}))
 		done
-
+		echo "Pantalla Final 2:"
 		tEjecMedio=$(echo "scale=2;$tEjecAcumulado/$procEjecutados" | bc -l)
 		tEsperaMedio=$(echo "scale=2;$tEsperaAcumulado/$procEjecutados" | bc -l)
 		tRetornoMedio=$(echo "scale=2;$tRetornoAcumulado/$procEjecutados" | bc -l)
-
-		#FIXME: Esto no se muestra bien :(	
 
 		imprimirTablaPredeterminada
 		echo "════════════════════════════════════════════════════════════════════════════"
@@ -1718,7 +1721,7 @@ ejecucion(){
 		read -ers -p "Pulse [enter] para continuar"
 	}
 
-	pantallaFinal
+	pantallaFinal 
 }
 
 
@@ -1730,7 +1733,7 @@ main(){
 	escribeDatos
 	ordenarProcesos
 	inicializarArrays
-	nularColumna "$P_TRETORNO" "$P_POSINI" "$P_POSFIN" "$P_ESTADO" "$P_TRESTANTE"
+	nularColumna "$P_TRETORNO" "$P_POSINI" "$P_POSFIN" "$P_ESTADO" "$P_TRESTANTE" "$P_TESPERA"
 	clear
 	imprimirTabla 1 2 3 4 5
 	
