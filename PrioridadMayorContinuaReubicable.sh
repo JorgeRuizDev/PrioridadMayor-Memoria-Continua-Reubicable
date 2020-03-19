@@ -696,7 +696,7 @@ datosManualProcesos(){
 #		Paso de comerme la cabeza, es una chapuza pero no hay otra, bash tiene muchas limitaciones en este aspecto.
 # Date: 19/03/2020
 selectorFichero(){
-	local tmp=$(mktemp)
+	local tmp=$(mktemp) #Fichero temporal
 	local -i seleccion
 	local -i nFicheros
 	local stringReturn
@@ -708,6 +708,7 @@ selectorFichero(){
 
 	if [[ $seleccion = 0 ]]; then
 		eval ${2}="null"
+		rm "$tmp"
 	else
 		stringReturn=$(sed -n ${seleccion}p $tmp)
 		rm "$tmp"
@@ -1757,10 +1758,39 @@ ejecucion(){
 
 	pantallaFinal 
 }
+
+# Nombre: abrirInforme
+# Descripción: Función con distintas opciones para abrir el informe
+# Date: 20/03/2020
 abrirInforme(){
 	echo "Qué desea visualizar?"
+	scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
+	if [ "$abrirInforme" = "s" ]; then
+		less -R informeDebug.txt
+	fi
 }
 
+# Nombre: renombrarDatosEntrada
+# Descripción: Renombra el archivo datos.txt para que los datos no sean borrados en la proxima ejecución
+# Date: 19/03/2020
+renombrarDatosEntrada(){
+	local opcion
+	local nombreArchivo
+	local -i haFallado=0
+	scanfSiNo "¿Desea guardar los datos de entrada con otro nombre? [s/n]:" "opcion"
+
+	if [[ $opcion = s ]]; then
+		echo  "Introduzca el nuevo nombre"
+		echo  "Recordatorio: Es necesario añadir el formato (.txt) y evitar usar Slashes [ / ], ya que son tomadas como un directorio"
+		read -r "nombreArchivo"
+
+		cat "datos.txt" > "$nombreArchivo" || haFallado=1 #Se podría hacer con un cp o un move, pero con esto nos ahorramos problemas
+
+		if [[ $haFallado -eq 1 ]];then
+			renombrarDatosEntrada
+		fi
+	fi
+}
 #main
 main(){
 	
@@ -1790,16 +1820,13 @@ main(){
 	
 	ejecucion 
 }
-
+renombrarDatosEntrada
 comprobacionDirectorio stringDeBúsqueda, no tiene valor alguno
 global #Carga las variables globales y ejecuta el main -> Está hecho así para poder minimizar todas las variables de global en el outline de VSCODE
 convertirFicheroColorEnBlancoNegro "informeDebug.txt" "informeDebugBN.txt" "false"
-abrirInforme
-scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
-if [ "$abrirInforme" = "s" ]; then
-	less -R informeDebug.txt
-fi
 
+abrirInforme
+renombrarDatosEntrada
 
 
 #Cosas que no funcionan #FIXME/TODO:
