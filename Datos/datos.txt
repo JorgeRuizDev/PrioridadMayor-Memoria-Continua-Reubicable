@@ -1,0 +1,11 @@
+Tamaño Memoria:14
+Apropiativo:n
+Estatico:s
+Prioridad Mínima:-27
+Prioridad Máxima:-24
+Nombre	T.Lleg	T.Ejec	Prior	Tamaño
+P01	8	8	-27	10	
+P02	3	3	-26	7	
+P03	3	10	-27	7	
+P04	13	8	-26	10	
+P05	0	3	-24	5	

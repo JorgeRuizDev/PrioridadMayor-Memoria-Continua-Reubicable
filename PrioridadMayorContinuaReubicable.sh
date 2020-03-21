@@ -170,9 +170,14 @@ declare -r STAT_FIN="Terminado"
 declare -r STAT_SISTEMA="Fuera del Sistema"
 declare -r STAT_APROP_PAUSA="En Pausa"		#Estado cuando un proceso es extraido de la CPU (En el modo apropiativo)
 
-#Ficheros:
-declare -r INFORME_FILENAME="informePrioridadMayor.txt"
-declare -r INFORMEBN_FILENAME="informePrioridadMayorBN.txt"
+#Ficheros y directorios:
+declare -r DATA_DIRECTORY="Datos/"
+declare -r LOG_DIRECTORY="Informes/"
+
+declare -r INFORME_FILENAME="${LOG_DIRECTORY}informePrioridadMayor.ANSI"
+declare -r INFORMEBN_FILENAME="${LOG_DIRECTORY}informePrioridadMayorBN.txt"
+
+
 
 #DEBUG (Variables globales):
 declare -r DEFAULT_DEBUG_OUTPUT_FILE_NAME="debug.txt"
@@ -180,8 +185,8 @@ declare -r DEBUG_ENABLE=true
 declare    DEBUG_FIRST_EXECUTION=true
 declare -r DEBUG_PERSISTENT_FILE=false
 
-
-main | tee -a "$INFORME_FILENAME" #Por la naturaleza de bash, si llamamos desde una función a otra, las variables de la primera función son accesibles desde la segunda
+creacionDeDirectorios
+main | tee  "$INFORME_FILENAME" #Por la naturaleza de bash, si llamamos desde una función a otra, las variables de la primera función son accesibles desde la segunda
 #Si llamamos a main desde global, podemos tener el GLOBAL como una función, y mantener sus funciones como globales
 finMain
 }
@@ -211,6 +216,22 @@ imprimirErrorCritico(){
 salirPorErrorCritico(){
 	imprimirErrorCritico "$1"
 	forzarCierre
+}
+# Nombre: medirTiempo
+# Descripción: Permite comparar el tiempo que transcurre entre las dos últimas llamas a esta función.
+#	Si no se ha ejecutado, imprime el tiempo del sistema
+# @Param $1: String a imprmir
+# @Param $2: Fichero en el que sacar el resultado. No pasar nada para no guardar
+# Variable global que almacena el último instante en ele que se ha llamado a la función (en ms)
+declare -i ultimoInstanteMedido=0
+
+medirTiempo(){
+
+	local -i tiempoActualMS=$(($(date +%s%N)/1000000))
+
+	echo "$1 : $((tiempoActualMS - ultimoInstanteMedido))ms" | tee -a $2
+	ultimoInstanteMedido=$tiempoActualMS
+
 }
 
 # Nombre: forzarCierre
@@ -436,6 +457,7 @@ mostrarPantallaInformacion(){
 	echo -e "\e[0;36m		║\e[0m                                Curso 2019-2020                                \e[0;36m║\e[0m"
 	echo -e "\e[0;36m		║\e[0m                                                                               \e[0;36m║\e[0m"
 	echo -e "\e[0;36m		╚═══════════════════════════════════════════════════════════════════════════════╝\e[0m\n"
+
 }
 
 # Nombre cargaDatos
@@ -676,7 +698,8 @@ selectorFichero(){
 	local -i nFicheros
 	local stringReturn
 	imprimirLCyan "Seleccione el archivo que desea leer:"
-	ls -p $1 | grep -v / | tee "$tmp" | cat -n
+	
+	ls  $1 | tee "$tmp" | cat -n
 
 	nFicheros=$(wc -l < "$tmp")
 	scanfNumMinMax "Valor entre 0 y $nFicheros: 0 permite introducir un nombre de forma manual: " "seleccion" 0 $nFicheros
@@ -698,13 +721,13 @@ datosFichero(){
 	local -i i
 	local -i j
 	local -i k #linea del fichero de los datos de procesos
-	local nomFile=datos.txt
+	local nomFile=${DATA_DIRECTORY}datos.txt
 	local respuesta
 	local numLineas
-	scanfSiNo "Por defecto se usa datos.txt ¿Quieres cambiarlo? [s/n]: " respuesta
+	scanfSiNo "Por defecto se usa ${DATA_DIRECTORY}datos.txt ¿Quieres cambiarlo? [s/n]: " respuesta
 	if [ "$respuesta" = "s" ]; then
 
-		selectorFichero "*.txt" "nomFile" #Muestra los ficheros que terminen en .txt
+		selectorFichero "${DATA_DIRECTORY}*.txt" "nomFile" #Muestra los ficheros que terminen en .txt
 
 		if [[ $nomFile = "null" ]]; then
 			scanfString "Nombre del fichero: " nomFile
@@ -830,22 +853,36 @@ escribeDatos(){
 	#Ordenanmos los procesos por nombre para la ejecución
 	ordenarProcesosNombre
 
-	echo "Tamaño Memoria:$tamMemoria" > datos.txt
-	echo "Apropiativo:$opcionApropiativo" >> datos.txt
-	echo "Estatico:$opcionEstatico" >> datos.txt
-	echo "Prioridad Mínima:$priorMin" >> datos.txt
-	echo "Prioridad Máxima:$priorMax" >> datos.txt
-	echo -e "Nombre\tT.Lleg\tT.Ejec\tPrior\tTamaño" >> datos.txt
+	echo "Tamaño Memoria:$tamMemoria" > ${DATA_DIRECTORY}datos.txt
+	echo "Apropiativo:$opcionApropiativo" >> ${DATA_DIRECTORY}datos.txt
+	echo "Estatico:$opcionEstatico" >> ${DATA_DIRECTORY}datos.txt
+	echo "Prioridad Mínima:$priorMin" >> ${DATA_DIRECTORY}datos.txt
+	echo "Prioridad Máxima:$priorMax" >> ${DATA_DIRECTORY}datos.txt
+	echo -e "Nombre\tT.Lleg\tT.Ejec\tPrior\tTamaño" >> ${DATA_DIRECTORY}datos.txt
 	for (( i=1; i<=numProc; i++ )) do
 		for(( j=1; j<=numCol; j++ )) do
-			echo -e -n "${procesos[$i,$j]}\t" >> datos.txt
+			echo -e -n "${procesos[$i,$j]}\t" >> ${DATA_DIRECTORY}datos.txt
 		done
-		echo  >> datos.txt
+		echo  >> ${DATA_DIRECTORY}datos.txt
 	done
 
 	#Ordenamos de nuevo para la ejecución:
 	ordenarProcesos
 }
+
+# Nombre: creacionDeDirectorios()
+# Descripción: Crea los directorios para los ficheros de entrada y los informes si no existen
+# Date: 21/03/2020
+creacionDeDirectorios(){
+	if [[ ! -d $DATA_DIRECTORY ]]; then
+		mkdir $DATA_DIRECTORY
+	fi
+
+	if [[ ! -d $LOG_DIRECTORY ]]; then
+		mkdir "$LOG_DIRECTORY"
+	fi
+}
+
 
 # Nombre: ordenarProcesos
 # Descripcion: ordena el array procesos en función del tiempo de llegada.
@@ -1392,6 +1429,14 @@ truncarMemoria(){
 		done
 			ultimoIndiceEncontrado=-1 #reseteo para que se imprima siempre en cada línea la dirección y el proceso
 	done
+
+	#Añade los elementos al margen izquierdo
+	for (( i=1; i<= (altoMemoriaTruncada*3); i+=3 )); do
+		memoriaTruncada[$((i-1)),0]="   "
+		memoriaTruncada[$((i  )),0]="   "
+		memoriaTruncada[$((i+1)),0]="   "
+	done
+	memoriaTruncada[$((1  )),0]="${NC}BM|"
 	#Escribe la última posición/tam memoria detrás de todos los strings
 	#memoriaTruncada[$(( (altoMemoriaTruncada*3) -2 )),$((anchoTerminalBloques-1))]="|$tamMemoria"
 
@@ -1406,7 +1451,7 @@ dibujarMemoria(){
 	local memoriaEnUsoPorciento #Es un string al ser float
 	declare -A memoriaTruncada
 	declare -i anchoTerminal=$(tput cols) #En columnas
-	declare -i anchoTerminalBloques=$((anchoTerminal/3)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color
+	declare -i anchoTerminalBloques=$(( anchoTerminal/3 - 1)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color || restamos 1 unidad para dejar margen para maniobrar
 	declare -i altoMemoriaTruncada
 	
 	#Calculamos el alto de memoria (el número de filas que ocupará truncada)
@@ -1486,6 +1531,7 @@ aniadirSiguienteProcesoACPU(){
 	#Guardamos el índice del proceso y actualizamos su estado
 	procesoCPU=$procesoConPrioridadMasAlta
 	procesos[$procesoCPU,$P_ESTADO]="$STAT_ENCPU"
+	procesos[$procesoCPU,$P_TRETORNO]=$(( tiempoEjecucion - ${procesos[$procesoCPU,$P_TLLEGADA]} ))
 	procesos[$procesoCPU,$P_TRESTANTE]=${procesos[$procesoCPU,$P_TEJECUCION]}
 }
 
@@ -1498,6 +1544,8 @@ aniadirSiguienteProcesoACPU(){
 ejecutarUnCiloDeCPU(){
 	#Decrementamos en una unidad el tiempo restante del proceso en ejecución
 	procesos[$procesoCPU,$P_TRESTANTE]=$(( ${procesos[$procesoCPU,$P_TRESTANTE]}-1))
+	((procesos[$procesoCPU,$P_TRETORNO]++))
+	
 	lineaEstadoCPU+=("$procesoCPU")
 	
 	#aumenta el tiempo de espera de los procesoso en memoria y en cola
@@ -1549,7 +1597,7 @@ truncarBarraCPU(){
 	colorearBarraTiempo
 
 	for (( i=1; i<= (altoLineaTiempoTruncada*3); i+=3 )); do
-		for ((j=0; j < anchoTerminalBloques; j++)); do	#La barra de CPU empieza en 0
+		for ((j=1; j <= anchoTerminalBloques; j++)); do	#La barra de CPU empieza en 0
 
 			#Volcamos la fila intermedia (barras de color)
 			lineaTiempoTruncada[$i,$j]=${barraTiempoColor[$ultimaPosMemEmplazada]}
@@ -1583,6 +1631,13 @@ truncarBarraCPU(){
 			ultimoIndiceEncontrado=-1 #reseteo para que se imprima siempre en cada línea la dirección y el proceso
 	done
 	
+	#Añade los elementos al margen izquierdo
+	for (( i=1; i<= (altoLineaTiempoTruncada*3); i+=3 )); do
+		lineaTiempoTruncada[$((i-1)),0]="   "
+		lineaTiempoTruncada[$((i  )),0]="   "
+		lineaTiempoTruncada[$((i+1)),0]="   "
+	done
+	lineaTiempoTruncada[$((1  )),0]="${NC}BT|"
 }
 
 colorearBarraTiempo(){
@@ -1608,19 +1663,24 @@ colorearBarraTiempo(){
 dibujarEstadoCPU(){
 	local -i
 	declare -i anchoTerminal=$(tput cols) #En columnas
-	declare -i anchoTerminalBloques=$((anchoTerminal/3)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color
+	declare -i anchoTerminalBloques=$((anchoTerminal/3 - 1)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color || restamos 1 unidad para dejar margen para maniobrar
 	declare -A lineaTiempoTruncada
 	declare -i altoLineaTiempoTruncada
 	
 	#Calculamos el alto de memoria (el número de filas que ocupará truncada)
 	if [[ $((tiempoEjecucion%anchoTerminalBloques)) == 0 ]];then
-		altoLineaTiempoTruncada=$((tiempoEjecucion/anchoTerminalBloques))
+		if [[ tiempoEjecucion -eq 0 ]]; then #Con tiempo 0 la CPU está vacía, pero queremos mostrarla, por lo que hay que forzar el valor a 1
+			altoLineaTiempoTruncada=1
+		else
+			altoLineaTiempoTruncada=$((tiempoEjecucion/anchoTerminalBloques))
+		fi
 	else	#Si la memoria ocupa parte de una líena, la asignamos entera
 		altoLineaTiempoTruncada=$(( ( tiempoEjecucion/anchoTerminalBloques ) + 1 ))
 	fi
 
 	truncarBarraCPU
-	for (( i= 0; i< 3*altoLineaTiempoTruncada; i++ ));do
+
+	for (( i= 0; i<= 3*altoLineaTiempoTruncada; i++ ));do
 		for (( j=0; j<=anchoTerminalBloques ; j++));do
 			echo -en "${lineaTiempoTruncada[$i,$j]}"
 		done
@@ -1643,9 +1703,9 @@ ejecucion(){
 	memoriaLibre=$tamMemoria
 	vaciarMemoria
 	
-
+	medirTiempo "Incio"
 	while [[ $procEjecutados -lt $numProc ]]; do # mientras el numero de procesos ejecutados sea menor a procesos total
-		clear
+		
 		haHabidoUnCambio=0
 
 		comprobarSiElProcesoEnCPUHaTerminado
@@ -1655,7 +1715,8 @@ ejecucion(){
 			imprimirLCyan "El último proceso ha sido desalojado con éxito de CPU y Memoria!"
 			break
 		fi
-	
+
+		
 		#Introducimos a la cola los procesos que han llegado a memoria
 		for((i=1;i<=numProc;i++)) do
 			if [[ ${procesos[$i,$P_TLLEGADA]} -eq "$tiempoEjecucion" ]]; then
@@ -1692,15 +1753,22 @@ ejecucion(){
 		#Si ha habido un cambio/evento en el estado de algún proceso -> Salida por pantalla
 		if [[ $haHabidoUnCambio -eq 1 ]] || [[ $tiempoEjecucion -eq 0 ]]; then
 			echo "════════════════════════════════════════════════════════════════════════════"
+			
+			
 			imprimirTablaPredeterminada
 			echo -e "${B_WHITE}Instante: $tiempoEjecucion | P. más alta: $priorMax | P. más baja: $priorMin ${NC}"
+			medirTiempo "dibujando memoria" 
 			dibujarMemoria "mostrarStatsMemoria"
+			medirTiempo "fin dibujando memoria" "medidas.txt"
+			
 			dibujarEstadoCPU 
+			medirTiempo "fin dibujando CPU" "medidas.txt"
 			imprimirLCyan "Número de procesos ejecutados $procEjecutados/$numProc"
 
 			#breakpoint "Fin del loop $tiempoEjecucion del WHILE"
 			read -ers -p "Pulse [enter] para continuar "
 			echo "════════════════════════════════════════════════════════════════════════════"
+			clear
 		fi
 		ejecutarUnCiloDeCPU
 	done
@@ -1729,7 +1797,7 @@ ejecucion(){
 		dibujarMemoria
 		dibujarEstadoCPU
 
-		read -ers -p "Pulse [enter] para continuar"
+		echo -e "\n\n"
 	}
 
 	pantallaFinal 
@@ -1740,7 +1808,7 @@ ejecucion(){
 # Date: 20/03/2020
 abrirInforme(){
 	local opcion
-	echo "Qué desea visualizar?"
+	imprimirLCyan "Qué desea visualizar?"
 	echo "  1) Informe a color completo (con \$cat)"
 	echo "  2) Informe a color con scroll (con \$less, estilo Editor VI)"
 	echo "  3) Informe en blanco y negro completo(con \$cat)"
@@ -1792,8 +1860,9 @@ renombrarDatosEntrada(){
 		echo  "Recordatorio: Es necesario añadir el formato (.txt) y evitar usar Slashes [ / ], ya que son tomadas como un directorio"
 		read -r "nombreArchivo"
 
-		cat "datos.txt" > "$nombreArchivo" || haFallado=1 #Se podría hacer con un cp o un move, pero con esto nos ahorramos problemas
+		cat "${DATA_DIRECTORY}datos.txt" > "${DATA_DIRECTORY}$nombreArchivo" || haFallado=1 #Se podría hacer con un cp o un move, pero con esto nos ahorramos problemas
 
+		
 		if [[ $haFallado -eq 1 ]];then
 			renombrarDatosEntrada
 		fi
@@ -1824,9 +1893,10 @@ main(){
 	║					║
 	╚═══════════════════════════════════════╝"
 	
-	imprimirLCyan "Pulsa enter para continuar" -n
+	imprimirLCyan "Pulse [enter] para continuar" -n
 	read -ers
-	
+
+	clear
 	ejecucion 
 }
 # Nombre: finMain
