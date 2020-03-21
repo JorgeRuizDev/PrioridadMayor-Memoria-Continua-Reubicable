@@ -7,7 +7,7 @@ global(){
 #TODO: Borrar cosas inexistentes.
 declare opcionApropiativo
 declare opcionEstatico
-declare -a memoria
+
 
 #Array con la cola | Empieza en 1, por lo que el valor 0 siempre se podrá saltar 
 #(nota alumno 2020: Lo arrays empiezan siempre en 0, pero paso de cambiarlo, ten en cuenta que la mayoría de los arrays de esta práctica empiezan en 1, además igual en bash da problemas)
@@ -21,11 +21,10 @@ declare -i procesoCPU=0
 
 declare -i priorMin
 declare -i priorMax			
-declare -i numeroParticiones #Borrar
-declare -i tamPart			
+	
 declare -i tamCola=0
 declare tipoPrioridad
-declare abrirInforme
+
 
 #Según Necesidades (2020):
 declare tamMemoria=15
@@ -173,7 +172,7 @@ declare -r STAT_APROP_PAUSA="En Pausa"		#Estado cuando un proceso es extraido de
 
 #Ficheros:
 declare -r INFORME_FILENAME="informePrioridadMayor.txt"
-
+declare -r INFORMEBN_FILENAME="informePrioridadMayorBN.txt"
 
 #DEBUG (Variables globales):
 declare -r DEFAULT_DEBUG_OUTPUT_FILE_NAME="debug.txt"
@@ -182,22 +181,11 @@ declare    DEBUG_FIRST_EXECUTION=true
 declare -r DEBUG_PERSISTENT_FILE=false
 
 
-main | tee -a informeDebug.txt #Por la naturaleza de bash, si llamamos desde una función a otra, las variables de la primera función son accesibles desde la segunda
+main | tee -a "$INFORME_FILENAME" #Por la naturaleza de bash, si llamamos desde una función a otra, las variables de la primera función son accesibles desde la segunda
 #Si llamamos a main desde global, podemos tener el GLOBAL como una función, y mantener sus funciones como globales
+finMain
 }
 
-#TODO generales:
-#	-Verificación de que el script se está ejecutando desde ./script.sh ó script.sh, y que no hay más carpetas antes.
-#	
-
-
-# Nombre: escribirInforme
-# Descripcion: escribe en el archivo informePrioridadMenor.txt
-# @param $1: texto a escribir en el informe
-# @param $2 (opcional): argumento para el echo como -n si no se quiere introducir un salto de linea
-escribirInforme(){
-	echo $2 -e "$1" >> informePrioridadMenor.txt
-}
 
 # Nombre: imprimirAviso
 # Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras.
@@ -261,17 +249,6 @@ comprobacionDirectorio(){
 
 		salirPorErrorCritico "Por favor, ejecute el script desde la ruta ./script.sh y no desde otro directorio o carpetas"
 	fi
-}
-
-# Nombre: FuncionDeTesteo
-# Descripción: Función simple que ejecuta un código aislado, sin ensuciar el main
-# Detalles: Es necesario llegar hasta el final del archivo para cargar todas las funciones, si se queire probar algo que no ha sido cargado, es un poco incómod
-# esta función puede ser tratada como un main aislado, el objetivo es probar el código de años anteriores sin necesidad de ejecutar todo el programa
-# Date: 21/02/2020
-funcionDeTesteo(){
-
-	salirPorErrorCritico "Se entero de que los kapopers no bieneron a su ciudad"
-
 }
 
 # Nombre: imprimirLCyan
@@ -434,7 +411,6 @@ comprobarSN(){
 
 mostrarPantallaInformacion(){
 	clear
-	echo "$(date '+%d/%m/%Y %H:%M:%S')" | tee informeDebug.txt
 	echo -e "\e[0;36m			╔══════════════════════════════════════════════════════════╗\e[0m"
 	echo -e "\e[0;36m			║\e[0m                     Creative Commons                     \e[0;36m║\e[0m"
 	echo -e "\e[0;36m			║\e[0m                                                          \e[0;36m║\e[0m"
@@ -460,7 +436,6 @@ mostrarPantallaInformacion(){
 	echo -e "\e[0;36m		║\e[0m                                Curso 2019-2020                                \e[0;36m║\e[0m"
 	echo -e "\e[0;36m		║\e[0m                                                                               \e[0;36m║\e[0m"
 	echo -e "\e[0;36m		╚═══════════════════════════════════════════════════════════════════════════════╝\e[0m\n"
-	echo "" >>informePrioridadMenor.txt
 }
 
 # Nombre cargaDatos
@@ -963,6 +938,7 @@ imprimirTabla(){
 # @Param $2: Dirección del fichero 2 en el que se volcará el resultado
 # @Param $3: String boolano ("true"), en el que se indica si se quiere borrar el fichero original
 convertirFicheroColorEnBlancoNegro(){
+	
 	sed -r "s/\x1B\[(([0-9]{1,2})?(;)?([0-9]{1,2})?)?[m,K,H,f,J]//g" "$1" > "$2"
 
 	if [[ $3 = "true" ]];then
@@ -982,9 +958,9 @@ inicializarArrays(){
 	procesos[0,$P_TAMANIO]=0
 	procesos[0,$P_TRESTANTE]=-1
 	if [ $tipoPrioridad = "-lt" ]; then
-		procesos[0,$P_PRIORIDAD]=$(($priorMax + 1))
+		procesos[0,$P_PRIORIDAD]=$((priorMax + 1))
 	else
-		procesos[0,$P_PRIORIDAD]=$(($priorMax - 1))
+		procesos[0,$P_PRIORIDAD]=$((priorMax - 1))
 	fi
 }
 
@@ -1763,11 +1739,43 @@ ejecucion(){
 # Descripción: Función con distintas opciones para abrir el informe
 # Date: 20/03/2020
 abrirInforme(){
+	local opcion
 	echo "Qué desea visualizar?"
-	scanfSiNo "¿Quieres abrir el informe? [s/n]:" "abrirInforme"
-	if [ "$abrirInforme" = "s" ]; then
-		less -R informeDebug.txt
-	fi
+	echo "  1) Informe a color completo (con \$cat)"
+	echo "  2) Informe a color con scroll (con \$less, estilo Editor VI)"
+	echo "  3) Informe en blanco y negro completo(con \$cat)"
+	echo "  4) Informe en blanco y negro con scroll (con \$less, estilo Editor VI)"
+	echo "  5) Editar Informe blanco y negro con VIM"
+	echo "  6) Editar Informe blanco y negro con NANO"
+	echo "  *) Salir"
+
+	read -r opcion
+
+	case $opcion in
+	1)
+		cat "$INFORME_FILENAME"
+	;;
+	2)
+		less -R "$INFORME_FILENAME"
+	;;
+	3)
+		cat "$INFORMEBN_FILENAME"
+	;;
+	4)
+		less "$INFORMEBN_FILENAME"
+	;;
+	5)
+		vim "$INFORMEBN_FILENAME"
+	;;
+	6)
+		nano "$INFORMEBN_FILENAME"
+	;;
+	*)
+		echo -n ""
+	;;
+	esac
+
+	
 }
 
 # Nombre: renombrarDatosEntrada
@@ -1794,14 +1802,15 @@ renombrarDatosEntrada(){
 #main
 main(){
 	
-	mostrarPantallaInformacion
-	cargaDatos
-	escribeDatos
+	
+	mostrarPantallaInformacion 
+	cargaDatos 
+	escribeDatos 
 	ordenarProcesos
 	inicializarArrays
 	nularColumna "$P_TRETORNO" "$P_POSINI" "$P_POSFIN" "$P_ESTADO" "$P_TRESTANTE" "$P_TESPERA"
 	clear
-	imprimirTabla 1 2 3 4 5
+	imprimirTabla 1 2 3 4 5 
 	
 
 
@@ -1820,15 +1829,15 @@ main(){
 	
 	ejecucion 
 }
-renombrarDatosEntrada
+# Nombre: finMain
+# Descripción: Es la función que se ejecuta tras el main (en global)
+# 	Todas las salidas de main se ven reflejadas en el archivo $INFORME_FILENAME, pero como no queremos todas, aislamos el final del programa
+# Nota:Si haces el | tee sobre algunas funciones de main, se rompe la ejecución, y si el finMain no se ejecuta desde global, se pierden los parámetros globales 
+finMain(){
+	convertirFicheroColorEnBlancoNegro $INFORME_FILENAME $INFORMEBN_FILENAME "false"
+	renombrarDatosEntrada
+	abrirInforme
+}
+
 comprobacionDirectorio stringDeBúsqueda, no tiene valor alguno
 global #Carga las variables globales y ejecuta el main -> Está hecho así para poder minimizar todas las variables de global en el outline de VSCODE
-convertirFicheroColorEnBlancoNegro "informeDebug.txt" "informeDebugBN.txt" "false"
-
-abrirInforme
-renombrarDatosEntrada
-
-
-#Cosas que no funcionan #FIXME/TODO:
-#	Líneas de tiempo y CPU en condiciones
-#	Informes en condiciones
