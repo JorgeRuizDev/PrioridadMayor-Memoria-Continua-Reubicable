@@ -1,0 +1,47 @@
+Requisitos:
+
+    >Sistema actualizado (Ubuntu / Neon / Debian / Mint / etc...)
+    $ sudo apt update
+    $ sudo apt upgrade
+
+
+    >Git para la instalación
+    $ sudo apt install git
+
+    >ZASH (otra shell) para la ejecución, ya que está hecho en zsh
+    https://gist.github.com/derhuerst/12a1558a4b408b3b2b6e
+    $ sudo apt install zsh
+
+    >TREE (generar documentación)
+    $ sudo apt install tree
+
+    >Asciidoctor (convertir la documentación)
+    $ sudo apt install asciidoctor
+
+    >Asciidoctor-pdf (generar PDFs)
+    $ sudo gem install asciidoctor-pdf --pre
+
+    >ZSHELLDOC
+    https://github.com/zdharma/zshelldoc
+
+    1º Decidir una carpeta donde descargar los archivos
+        Ejemplo:
+        $ mkdir ~/Downloads/zshdoc && cd ~/Downloads/zshdoc
+    2º Descargar el código fuente
+        $ git clone https://github.com/zdharma/zshelldoc && cd zshelldoc
+    
+    3º Instalación (a 22/03/2020 -> commit nº 223)
+            ambos comandos con sudo:
+        # make && make install
+
+Generar documentación:
+
+    -Generar .adoc
+    $ zsd PrioridadMayorContinuaReubicable.sh 
+        >Generará la carpeta ./zsdoc
+
+    -Generar .html (Lo más cómodo con hypervículos)
+    $ asciidoctor zsdoc/PrioridadMayorContinuaReubicable.sh.adoc
+
+    -Generar .pdf
+    $ asciidoctor -b pdf -r asciidoctor-pdf zsdoc/PrioridadMayorContinuaReubicable.sh.adoc
