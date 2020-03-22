@@ -4,6 +4,7 @@ declare -r instrucciones="./otros/Instalar zshelldoc.txt"
 declare  nombreScript="./../PrioridadMayorContinuaReubicable.sh"
 declare nombreAdoc="./zsdoc/PrioridadMayorContinuaReubicable.sh.adoc"
 declare -r archivoCabecera="./otros/cabecera.txt"
+#Debería sera automático, antes de la línea FUNCTION
 declare -r nLineasOcupaCabeceraSucia=12
 # Nombre: scanfSiNo
 # Descripcion: asigna un valor valido a una variable desde el teclado
@@ -39,20 +40,10 @@ documentar(){
     
     case $opcion in
     1)
-        local opcionReemplazar
         zsd $nombreScript --bash
-        
-        echo -e "\n----------------------\nCabecera Nueva:"
-        cat "$archivoCabecera"
-        scanfSiNo "¿Desea reemplazar la cabecera por defecto con la cabecera personalizada? [s/n] " opcionReemplazar
-        
-        if [[ $opcionReemplazar = "s" ]];then
-            echo "Reemplazando Cabecera..."
-            reemplazarCabecera
-        fi
+        reemplazarCabecera
 
-
-        ;;
+    ;;
     2) 
         asciidoctor $nombreAdoc
     ;;
@@ -75,6 +66,16 @@ documentar(){
 reemplazarCabecera(){
     local -i nLineas
     local -i nLineasLeer
+    local opcionReemplazar
+
+    #Mostramos y dejamos escoger si queremos cargar la nueva cabecera
+    echo -e "\n----------------------\nCabecera Nueva:"
+    cat "$archivoCabecera"
+    scanfSiNo "¿Desea reemplazar la cabecera por defecto con la cabecera personalizada? [s/n] " opcionReemplazar
+    if [[ $opcionReemplazar != "s" ]];then
+        return 0
+    fi
+
     temp=$(mktemp)
 
     nLineas=$(wc -l < $nombreAdoc)
@@ -82,6 +83,7 @@ reemplazarCabecera(){
     nLineasLeer=$(( nLineas - nLineasOcupaCabeceraSucia ))
 
     cat $archivoCabecera >> "$temp"
+
     tail -$nLineasLeer $nombreAdoc >> "$temp"
     
     cat "$temp" > $nombreAdoc
