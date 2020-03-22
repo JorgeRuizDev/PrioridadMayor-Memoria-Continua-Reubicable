@@ -1,194 +1,201 @@
 #!/bin/bash
 
+# Nombre: global
+# Descripción: Es el bloque de código que alberga todas las variables globales
+# ¿Por qué usar una función global?
+#	No hay mucho beneficio más allá del estético, poder minimazar el  bloque de código de global (200 líneas aprox)
+#	mejora muchísimo la navegabilidad del código.
+#	Todas las funciones que quieran usar variables de global tienen que ser llamdas desde: GLOBAL...
+# Date: Pues no lo sé
 global(){
 
-#declaracion de variables
+	#declaracion de variables
 
-#TODO: Borrar cosas inexistentes.
-declare opcionApropiativo
-declare opcionEstatico
-
-
-#Array con la cola | Empieza en 1, por lo que el valor 0 siempre se podrá saltar 
-#(nota alumno 2020: Lo arrays empiezan siempre en 0, pero paso de cambiarlo, ten en cuenta que la mayoría de los arrays de esta práctica empiezan en 1, además igual en bash da problemas)
-declare -a cola
-declare -r numCol=5		#FIXME: Sin uso/referencia encontrada de momento (Estaba desde 2018), igual borrar
-declare -i numProc=0
-
-# Índice que almacena el proceso que está ejécutándose en CPU
-declare -i procesoCPU=0
+	#TODO: Borrar cosas inexistentes.
+	declare opcionApropiativo
+	declare opcionEstatico
 
 
-declare -i priorMin
-declare -i priorMax			
-	
-declare -i tamCola=0
-declare tipoPrioridad
+	#Array con la cola | Empieza en 1, por lo que el valor 0 siempre se podrá saltar 
+	#(nota alumno 2020: Lo arrays empiezan siempre en 0, pero paso de cambiarlo, ten en cuenta que la mayoría de los arrays de esta práctica empiezan en 1, además igual en bash da problemas)
+	declare -a cola
+	declare -r numCol=5		#FIXME: Sin uso/referencia encontrada de momento (Estaba desde 2018), igual borrar
+	declare -i numProc=0
+
+	# Índice que almacena el proceso que está ejécutándose en CPU
+	declare -i procesoCPU=0
 
 
-#Según Necesidades (2020):
-declare tamMemoria=15
-declare memoriaLibre
-declare -a lineaEstadoCPU
+	declare -i priorMin
+	declare -i priorMax			
+		
+	declare -i tamCola=0
+	declare tipoPrioridad
 
 
-
-	
-#Colores de texto
-#ejemplo: echo -e "${B_RED}texto en rojo negrita${GREEN}texto en verde${NC}"
-declare -a coloresLetras
-declare -r DEFAULT='\e[39m' #Color por defecto
-declare -r BLACK='\e[30m'
-declare -r RED='\e[31m'
-declare -r GREEN='\e[32m'
-declare -r YELLOW='\e[33m'
-declare -r BLUE='\e[34m'
-declare -r MAGENTA='\e[35m'
-declare -r CYAN='\e[36m'
-declare -r L_GRAY='\e[36m' #Gris claro
-declare -r D_GRAY='\e[90m' #Gris oscuro
-declare -r L_RED='\e[91m' #Rojo claro
-declare -r L_GREEN='\e[92m' #Verde claro
-declare -r L_YELLOW='\e[93m' #Amarillo claro
-declare -r L_BLUE='\e[94m' #Azul claro
-declare -r L_MAGENTA='\e[95m' #Magenta claro
-declare -r L_CYAN='\e[96m' #Cyan claro
-declare -r WHITE='\e[97m'
-
-coloresLetras=("$RED" "$GREEN" "$YELLOW" "$BLUE" "$MAGENTA" "$CYAN")
-
-#Colores en negrita
-declare -r BOLD='\e[1;39m'
-declare -r B_BLACK='\e[1;30m'
-declare -r B_RED='\e[1;31m'
-declare -r B_GREEN='\e[1;32m'
-declare -r B_YELLOW='\e[1;33m'
-declare -r B_BLUE='\e[1;34m'
-declare -r B_MAGENTA='\e[1;35m'
-declare -r B_CYAN='\e[1;36m'
-declare -r B_L_GRAY='\e[1;36m' #Gris claro
-declare -r B_D_GRAY='\e[1;90m' #Gris oscuro
-declare -r B_L_RED='\e[1;91m' #Rojo claro
-declare -r B_L_GREEN='\e[1;92m' #Verde claro
-declare -r B_L_YELLOW='\e[1;93m' #Amarillo claro
-declare -r B_L_BLUE='\e[1;94m' #Azul claro
-declare -r B_L_MAGENTA='\e[1;95m' #Magenta claro
-declare -r B_L_CYAN='\e[1;96m' #Cyan claro
-declare -r B_WHITE='\e[1;97m'
-#Fin de color
-declare -r NC='\e[0m' 
-
-#Colores de FONDO:
-declare -a coloresFondo
-declare -r _DEFAULT='\e[49m' #Color por defecto
-declare -r _BLACK='\e[40m'
-declare -r _RED='\e[41m'
-declare -r _GREEN='\e[42m'
-declare -r _YELLOW='\e[43m'
-declare -r _BLUE='\e[44m'
-declare -r _MAGENTA='\e[45m'
-declare -r _CYAN='\e[46m'
-declare -r _L_GRAY='\e[47m' #Gris claro
-declare -r _D_GRAY='\e[100m' #Gris oscuro
-declare -r _L_RED='\e[101m' #Rojo claro
-declare -r _L_GREEN='\e[102m' #Verde claro
-declare -r _L_YELLOW='\e[103m' #Amarillo claro
-declare -r _L_BLUE='\e[104m' #Azul claro
-declare -r _L_MAGENTA='\e[105m' #Magenta claro
-declare -r _L_CYAN='\e[106m' #Cyan claro
-declare -r _WHITE='\e[107m'
-
-coloresFondo=("$_RED" "$_GREEN" "$_YELLOW" "$_BLUE" "$_MAGENTA" "$_CYAN")
-
-# Memoria según necesidades es el array bidimensional en el que se almacenará la información de la memoria
-# No tengo intención de hacer un algoritmo eficiente para la memoria, por el simple hecho de 
-# que puede ser poco intuitivo para alumnos de primero
-#
-# Más adelante se explicará como estarán organizadas estas capas de memoria, y el contenido específico que almacenará cada capa
-declare -A memoriaSegunNecesidades
-#La memoria será un array bidimensional con 2 capas y M huecos, siendo M = tamMemoria
-#Así podremos almacenar que proceso se almacena en cada hueco.
-#Y en la capa MEM_INDICE guardar el índice/id del proceso (fila que ocupa en la tabla)
-#Y en la capa MEM_TOSTRING string con el color ya generado
-
-#Capa donde se guardaran los índices/Apuntadores/punteros de el proceso que se encuentra en cada posición de memoria respecto a la tabla de $procesos[]
-declare -r MEM_INDICE=0	
-
-#Capa donde se almacena el texto a imprimir
-declare -r MEM_TOSTRING=1
-
-	#Declares de los contenidos por defecto de la MEMORIA
-declare -r MEM_HUECO_VACIO="null"
-	#Valores que se imprimen por pantalla
-declare -r MEM_STRING_HUECO_VACIO="$_WHITE${WHITE}[_]${_DEFAULT}"
-declare -r MEM_STRING_HUECOSINCOLOR="[^]"	#Se colorea con el color del proceso
-
-#	######################################
-#	Declares 2020:
-#	######################################
-
-# Variable de control de BREAKPOINTS 
-#//@see breakpoint
-declare -r BREAKPOINT_ENABLED=true
-declare -r BREAKPOINT_AUTO=false
-declare -r BREAKPOINT_AUTO_TIMEOUT="0.5"
-
-
-#Tabla PROCESOS:
-declare -A procesos 
-declare -a cabeceraProcesos=("PID" "Ref" "TLl" "TEj" "Pri" "Mem" "Trej" "Tesp" "Tret" "Estado" "Color Fondo" "Color Letras" "DirI" "DirF")
-
-#Valores de la estructura/struc (El array bidimensional procesos)
-#//@see procesos
-#Los siguientes valores (1-9) son las posiciones del struct existentes a las versiones previas a 2020
-declare -r P_NOMBRE=1		#	$P_NOMBRE
-declare -r P_TLLEGADA=2		#	$P_TLLEGADA
-declare -r P_TEJECUCION=3	#	$P_TEJECUCION
-declare -r P_PRIORIDAD=4	#	$P_PRIORIDAD
-declare -r P_TAMANIO=5		#	$P_TAMANIO
-declare -r P_TRESTANTE=6	#	$P_TRESTANTE
-declare -r P_TESPERA=7		#	$P_TESPERA
-declare -r P_TRETORNO=8		#	$P_TRETORNO
-declare -r P_ESTADO=9		#	$P_ESTADO
-
-#Valores 2020:
-declare -r P_COLOR=10		#Color del Fondo
-declare -r P_COLORLETRA=11	#Colod de las letras
-declare -r P_POSINI=12		#Posición de inicio en la memoria
-declare -r P_POSFIN=13		#Posición donde termina el proceso en la memoria
-
-
-	#Array que almacena el número de huecos máximo que puede ocupar el string a imprimir de cada proceso.
-	#Por ejemplo, la referencia (columna/posArray nº 1) del proceso puede ocupar como máximo 3 huecos (p01 a p99), por lo que en la tabla imprimiremos 3 huecos máximo
-declare -a anchosTabla=(0 3 3 3 3 3 4 4 4 17 0 0 4 4)
-
-#Strings de estados/STATUS (Valores a asignar a P_ESTADO)
-declare -r STAT_MEMO="En Memoria"
-declare -r STAT_ENCPU="En Ejecución"
-declare -r STAT_COLA="En Espera"
-declare -r STAT_FIN="Terminado"
-declare -r STAT_SISTEMA="Fuera del Sistema"
-declare -r STAT_APROP_PAUSA="En Pausa"		#Estado cuando un proceso es extraido de la CPU (En el modo apropiativo)
-
-#Ficheros y directorios:
-declare -r DATA_DIRECTORY="Datos/"
-declare -r LOG_DIRECTORY="Informes/"
-
-declare -r INFORME_FILENAME="${LOG_DIRECTORY}informePrioridadMayor.ANSI"
-declare -r INFORMEBN_FILENAME="${LOG_DIRECTORY}informePrioridadMayorBN.txt"
+	#Según Necesidades (2020):
+	declare tamMemoria=15
+	declare memoriaLibre
+	declare -a lineaEstadoCPU
 
 
 
-#DEBUG (Variables globales):
-declare -r DEFAULT_DEBUG_OUTPUT_FILE_NAME="debug.txt"
-declare -r DEBUG_ENABLE=true
-declare    DEBUG_FIRST_EXECUTION=true
-declare -r DEBUG_PERSISTENT_FILE=false
+		
+	#Colores de texto
+	#ejemplo: echo -e "${B_RED}texto en rojo negrita${GREEN}texto en verde${NC}"
+	declare -a coloresLetras
+	declare -r DEFAULT='\e[39m' #Color por defecto
+	declare -r BLACK='\e[30m'
+	declare -r RED='\e[31m'
+	declare -r GREEN='\e[32m'
+	declare -r YELLOW='\e[33m'
+	declare -r BLUE='\e[34m'
+	declare -r MAGENTA='\e[35m'
+	declare -r CYAN='\e[36m'
+	declare -r L_GRAY='\e[36m' #Gris claro
+	declare -r D_GRAY='\e[90m' #Gris oscuro
+	declare -r L_RED='\e[91m' #Rojo claro
+	declare -r L_GREEN='\e[92m' #Verde claro
+	declare -r L_YELLOW='\e[93m' #Amarillo claro
+	declare -r L_BLUE='\e[94m' #Azul claro
+	declare -r L_MAGENTA='\e[95m' #Magenta claro
+	declare -r L_CYAN='\e[96m' #Cyan claro
+	declare -r WHITE='\e[97m'
 
-creacionDeDirectorios
-main | tee  "$INFORME_FILENAME" #Por la naturaleza de bash, si llamamos desde una función a otra, las variables de la primera función son accesibles desde la segunda
-#Si llamamos a main desde global, podemos tener el GLOBAL como una función, y mantener sus funciones como globales
-finMain
+	coloresLetras=("$RED" "$GREEN" "$YELLOW" "$BLUE" "$MAGENTA" "$CYAN")
+
+	#Colores en negrita
+	declare -r BOLD='\e[1;39m'
+	declare -r B_BLACK='\e[1;30m'
+	declare -r B_RED='\e[1;31m'
+	declare -r B_GREEN='\e[1;32m'
+	declare -r B_YELLOW='\e[1;33m'
+	declare -r B_BLUE='\e[1;34m'
+	declare -r B_MAGENTA='\e[1;35m'
+	declare -r B_CYAN='\e[1;36m'
+	declare -r B_L_GRAY='\e[1;36m' #Gris claro
+	declare -r B_D_GRAY='\e[1;90m' #Gris oscuro
+	declare -r B_L_RED='\e[1;91m' #Rojo claro
+	declare -r B_L_GREEN='\e[1;92m' #Verde claro
+	declare -r B_L_YELLOW='\e[1;93m' #Amarillo claro
+	declare -r B_L_BLUE='\e[1;94m' #Azul claro
+	declare -r B_L_MAGENTA='\e[1;95m' #Magenta claro
+	declare -r B_L_CYAN='\e[1;96m' #Cyan claro
+	declare -r B_WHITE='\e[1;97m'
+	#Fin de color
+	declare -r NC='\e[0m' 
+
+	#Colores de FONDO:
+	declare -a coloresFondo
+	declare -r _DEFAULT='\e[49m' #Color por defecto
+	declare -r _BLACK='\e[40m'
+	declare -r _RED='\e[41m'
+	declare -r _GREEN='\e[42m'
+	declare -r _YELLOW='\e[43m'
+	declare -r _BLUE='\e[44m'
+	declare -r _MAGENTA='\e[45m'
+	declare -r _CYAN='\e[46m'
+	declare -r _L_GRAY='\e[47m' #Gris claro
+	declare -r _D_GRAY='\e[100m' #Gris oscuro
+	declare -r _L_RED='\e[101m' #Rojo claro
+	declare -r _L_GREEN='\e[102m' #Verde claro
+	declare -r _L_YELLOW='\e[103m' #Amarillo claro
+	declare -r _L_BLUE='\e[104m' #Azul claro
+	declare -r _L_MAGENTA='\e[105m' #Magenta claro
+	declare -r _L_CYAN='\e[106m' #Cyan claro
+	declare -r _WHITE='\e[107m'
+
+	coloresFondo=("$_RED" "$_GREEN" "$_YELLOW" "$_BLUE" "$_MAGENTA" "$_CYAN")
+
+	# Memoria según necesidades es el array bidimensional en el que se almacenará la información de la memoria
+	# No tengo intención de hacer un algoritmo eficiente para la memoria, por el simple hecho de 
+	# que puede ser poco intuitivo para alumnos de primero
+	#
+	# Más adelante se explicará como estarán organizadas estas capas de memoria, y el contenido específico que almacenará cada capa
+	declare -A memoriaSegunNecesidades
+	#La memoria será un array bidimensional con 2 capas y M huecos, siendo M = tamMemoria
+	#Así podremos almacenar que proceso se almacena en cada hueco.
+	#Y en la capa MEM_INDICE guardar el índice/id del proceso (fila que ocupa en la tabla)
+	#Y en la capa MEM_TOSTRING string con el color ya generado
+
+	#Capa donde se guardaran los índices/Apuntadores/punteros de el proceso que se encuentra en cada posición de memoria respecto a la tabla de $procesos[]
+	declare -r MEM_INDICE=0	
+
+	#Capa donde se almacena el texto a imprimir
+	declare -r MEM_TOSTRING=1
+
+		#Declares de los contenidos por defecto de la MEMORIA
+	declare -r MEM_HUECO_VACIO="null"
+		#Valores que se imprimen por pantalla
+	declare -r MEM_STRING_HUECO_VACIO="$_WHITE${WHITE}[_]${_DEFAULT}"
+	declare -r MEM_STRING_HUECOSINCOLOR="[^]"	#Se colorea con el color del proceso
+
+	#	######################################
+	#	Declares 2020:
+	#	######################################
+
+	# Variable de control de BREAKPOINTS 
+	#//@see breakpoint
+	declare -r BREAKPOINT_ENABLED=true
+	declare -r BREAKPOINT_AUTO=false
+	declare -r BREAKPOINT_AUTO_TIMEOUT="0.5"
+
+
+	#Tabla PROCESOS:
+	declare -A procesos 
+	declare -a cabeceraProcesos=("PID" "Ref" "TLl" "TEj" "Pri" "Mem" "Trej" "Tesp" "Tret" "Estado" "Color Fondo" "Color Letras" "DirI" "DirF")
+
+	#Valores de la estructura/struc (El array bidimensional procesos)
+	#//@see procesos
+	#Los siguientes valores (1-9) son las posiciones del struct existentes a las versiones previas a 2020
+	declare -r P_NOMBRE=1		#	$P_NOMBRE
+	declare -r P_TLLEGADA=2		#	$P_TLLEGADA
+	declare -r P_TEJECUCION=3	#	$P_TEJECUCION
+	declare -r P_PRIORIDAD=4	#	$P_PRIORIDAD
+	declare -r P_TAMANIO=5		#	$P_TAMANIO
+	declare -r P_TRESTANTE=6	#	$P_TRESTANTE
+	declare -r P_TESPERA=7		#	$P_TESPERA
+	declare -r P_TRETORNO=8		#	$P_TRETORNO
+	declare -r P_ESTADO=9		#	$P_ESTADO
+
+	#Valores 2020:
+	declare -r P_COLOR=10		#Color del Fondo
+	declare -r P_COLORLETRA=11	#Colod de las letras
+	declare -r P_POSINI=12		#Posición de inicio en la memoria
+	declare -r P_POSFIN=13		#Posición donde termina el proceso en la memoria
+
+
+		#Array que almacena el número de huecos máximo que puede ocupar el string a imprimir de cada proceso.
+		#Por ejemplo, la referencia (columna/posArray nº 1) del proceso puede ocupar como máximo 3 huecos (p01 a p99), por lo que en la tabla imprimiremos 3 huecos máximo
+	declare -a anchosTabla=(0 3 3 3 3 3 4 4 4 17 0 0 4 4)
+
+	#Strings de estados/STATUS (Valores a asignar a P_ESTADO)
+	declare -r STAT_MEMO="En Memoria"
+	declare -r STAT_ENCPU="En Ejecución"
+	declare -r STAT_COLA="En Espera"
+	declare -r STAT_FIN="Terminado"
+	declare -r STAT_SISTEMA="Fuera del Sistema"
+	declare -r STAT_APROP_PAUSA="En Pausa"		#Estado cuando un proceso es extraido de la CPU (En el modo apropiativo)
+
+	#Ficheros y directorios:
+	declare -r DATA_DIRECTORY="Datos/"
+	declare -r LOG_DIRECTORY="Informes/"
+
+	declare -r INFORME_FILENAME="${LOG_DIRECTORY}informePrioridadMayor.ANSI"
+	declare -r INFORMEBN_FILENAME="${LOG_DIRECTORY}informePrioridadMayorBN.txt"
+
+
+
+	#DEBUG (Variables globales):
+	declare -r DEFAULT_DEBUG_OUTPUT_FILE_NAME="debug.txt"
+	declare -r DEBUG_ENABLE=true
+	declare    DEBUG_FIRST_EXECUTION=true
+	declare -r DEBUG_PERSISTENT_FILE=false
+
+	creacionDeDirectorios
+	main | tee  "$INFORME_FILENAME" #Por la naturaleza de bash, si llamamos desde una función a otra, las variables de la primera función son accesibles desde la segunda
+	#Si llamamos a main desde global, podemos tener el GLOBAL como una función, y mantener sus funciones como globales
+	finMain
 }
 
 
@@ -222,9 +229,10 @@ salirPorErrorCritico(){
 #	Si no se ha ejecutado, imprime el tiempo del sistema
 # @Param $1: String a imprmir
 # @Param $2: Fichero en el que sacar el resultado. No pasar nada para no guardar
+# Date: 22/03/2020
+#
 # Variable global que almacena el último instante en ele que se ha llamado a la función (en ms)
 declare -i ultimoInstanteMedido=0
-
 medirTiempo(){
 
 	local -i tiempoActualMS=$(($(date +%s%N)/1000000))
@@ -294,11 +302,11 @@ fin_programa(){
 scanfSiNo() {
 	local opcionSiNo
 	imprimirLCyan "$1" -n 
-	read opcionSiNo
+	read -r opcionSiNo
 	until [[ $opcionSiNo = s || $opcionSiNo = n || $opcionSiNo = S || $opcionSiNo = N ]]; do
 		imprimirAviso "El valor '$opcionSiNo' introducido no válido, tiene que ser 's' o 'n'. Vuelve a intentarlo."
 		imprimirLCyan "$1" -n
-		read opcionSiNo
+		read -r opcionSiNo
 	done
 	eval ${2}=$opcionSiNo #asignamos la opcionSiNo valida al variable $2 pasado como parametro
 }
@@ -360,7 +368,7 @@ scanfString(){
 	while [ $palabra -ne 1 ]; do #comprueba si está vacío o tiene un espacio
 		imprimirAviso "No puede ser vacío ni tener espacios."
 		imprimirLCyan "$1" -n
-		read opcionNombre
+		read -r opcionNombre
 		palabra=`echo $opcionNombre | wc -w`
 	done
 	eval ${2}=$opcionNombre
@@ -430,7 +438,10 @@ comprobarSN(){
 	fi
 } 
 
-mostrarPantallaInformacion(){
+# Nombre: imprimirCabecera
+# Descripción: Imprime la cabecera del programa
+# Date: 7/03/2020
+imprimirCabecera(){
 	clear
 	echo -e "\e[0;36m			╔══════════════════════════════════════════════════════════╗\e[0m"
 	echo -e "\e[0;36m			║\e[0m                     Creative Commons                     \e[0;36m║\e[0m"
@@ -546,8 +557,8 @@ menuAlgoritmo(){
  ║${NC} En caso contrario aumentará al finalizar la ejecución de un proceso.            ${L_YELLOW}║
  ║                                                                                 ║
  ╚═════════════════════════════════════════════════════════════════════════════════╝${NC}\n"
-		imprimirLCyan "Intro para salir de la ayuda" -n
-		read -s
+		imprimirLCyan "Pulse [Intro] para salir de la ayuda" -n
+		read -ers
 		menuAlgoritmo;;
 		6) fin_programa;;
 	esac
@@ -687,7 +698,7 @@ datosManualProcesos(){
 # Nota: Esta función utiliza un fichero temporal que se almacena en /tmp
 #	Se requiere de la función mktemp que no es POSIX. Está instalada en muchos sitemas, pero ojo cuidado!
 #
-# --NO------@Param $1: secuencia de escape: por ejemplo $1='*.txt' muestra sólo los ficheros que terminen con 'txt', es el resultado de un ls
+# --NO------@Param $1: secuencia de escape: por ejemplo $1='*.txt' muestra sólo los ficheros que terminen con 'txt', es el resultado de un ls--------
 # @Param $2: variable en la que vamos a almacenar el string de resultado
 # GLOBAL: los valores se asignan también a $nomFile, ya que eval no permite hacer return de un string con espacios
 #		Paso de comerme la cabeza, es una chapuza pero no hay otra, bash tiene muchas limitaciones en este aspecto.
@@ -1528,7 +1539,7 @@ aniadirSiguienteProcesoACPU(){
 		fi
 	done
 
-	#Guardamos el índice del proceso y actualizamos su estado
+	#Guardamos el índice del proceso y actualizamos sus estados y tiempos
 	procesoCPU=$procesoConPrioridadMasAlta
 	procesos[$procesoCPU,$P_ESTADO]="$STAT_ENCPU"
 	procesos[$procesoCPU,$P_TRETORNO]=$(( tiempoEjecucion - ${procesos[$procesoCPU,$P_TLLEGADA]} ))
@@ -1575,7 +1586,7 @@ comprobarSiElProcesoEnCPUHaTerminado(){
 		procesos[$procesoCPU,$P_ESTADO]=$STAT_FIN
 		procesoCPU=0
 	fi
-	procesos[$procesoCPU,$P_TRETORNO]=$tiempoEjecucion 
+	
 }
 
 # Nombre: truncarBarraCPU
@@ -1703,7 +1714,6 @@ ejecucion(){
 	memoriaLibre=$tamMemoria
 	vaciarMemoria
 	
-	medirTiempo "Incio"
 	while [[ $procEjecutados -lt $numProc ]]; do # mientras el numero de procesos ejecutados sea menor a procesos total
 		
 		haHabidoUnCambio=0
@@ -1757,12 +1767,12 @@ ejecucion(){
 			
 			imprimirTablaPredeterminada
 			echo -e "${B_WHITE}Instante: $tiempoEjecucion | P. más alta: $priorMax | P. más baja: $priorMin ${NC}"
-			medirTiempo "dibujando memoria" 
+			
 			dibujarMemoria "mostrarStatsMemoria"
-			medirTiempo "fin dibujando memoria" "medidas.txt"
+			
 			
 			dibujarEstadoCPU 
-			medirTiempo "fin dibujando CPU" "medidas.txt"
+			
 			imprimirLCyan "Número de procesos ejecutados $procEjecutados/$numProc"
 
 			#breakpoint "Fin del loop $tiempoEjecucion del WHILE"
@@ -1871,8 +1881,8 @@ renombrarDatosEntrada(){
 #main
 main(){
 	
-	
-	mostrarPantallaInformacion 
+	imprimir
+	Cabecera 
 	cargaDatos 
 	escribeDatos 
 	ordenarProcesos
@@ -1902,12 +1912,14 @@ main(){
 # Nombre: finMain
 # Descripción: Es la función que se ejecuta tras el main (en global)
 # 	Todas las salidas de main se ven reflejadas en el archivo $INFORME_FILENAME, pero como no queremos todas, aislamos el final del programa
-# Nota:Si haces el | tee sobre algunas funciones de main, se rompe la ejecución, y si el finMain no se ejecuta desde global, se pierden los parámetros globales 
+# Nota:Si haces el | tee sobre algunas funciones de main, se rompe la ejecución, y si el finMain no se ejecuta desde global, se pierden los parámetros globales como colores o nombres de archivo
 finMain(){
 	convertirFicheroColorEnBlancoNegro $INFORME_FILENAME $INFORMEBN_FILENAME "false"
 	renombrarDatosEntrada
 	abrirInforme
 }
+
+
 
 comprobacionDirectorio stringDeBúsqueda, no tiene valor alguno
 global #Carga las variables globales y ejecuta el main -> Está hecho así para poder minimizar todas las variables de global en el outline de VSCODE

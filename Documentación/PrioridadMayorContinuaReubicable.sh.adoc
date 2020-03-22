@@ -2,13 +2,21 @@ PrioridadMayorContinuaReubicable.sh(1)
 ======================================
 :compat-mode!:
 :toc: left
-NAME
-----
-PrioridadMayorContinuaReubicable.sh - a shell script
 
-SYNOPSIS
---------
-Documentation automatically generated with `zshelldoc'
+ALUMNO
+------
+Jorge Ruiz Gómez
+
+Sistemas Operativos
+
+2019-2020
+
+INFORMACIÓN
+-----------
+Script que simula el comportamiento de un algoritmo
+
+Prioridad Mayor - Memoria Contínua Reubicable
+
 
 FUNCTIONS
 ---------
