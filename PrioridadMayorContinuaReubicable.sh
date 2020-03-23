@@ -1426,7 +1426,10 @@ truncarMemoria(){
 	local    ultimoIndiceEncontrado=-1
 	local -i i
 	local -i j
-
+	
+	#Últimas i,j -> Almacena la última posición en la que se dibuja memoria, para añadir al final de la barra el número con la memoria total
+	local -i ultimaI
+	local -i ultimaJ
 	for (( i=1; i<= (altoMemoriaTruncada*3); i+=3 )); do
 		for ((j=1; j <= anchoTerminalBloques; j++)); do	#La línea de memoria empieza en 1
 			memoriaTruncada[$i,$j]=${memoriaSegunNecesidades[$ultimaPosMemEmplazada,$MEM_TOSTRING]}
@@ -1452,8 +1455,10 @@ truncarMemoria(){
 				memoriaTruncada[$((i+1)),$j]="   "		 #No hay dirección al no haber cambio de proceso -> Vacío
 			fi
 			((ultimaPosMemEmplazada++))
-
+			ultimaI=$i
+			ultimaJ=$j
 			if [[ $ultimaPosMemEmplazada -gt $tamMemoria ]];then break; fi
+
 		done
 			ultimoIndiceEncontrado=-1 #reseteo para que se imprima siempre en cada línea la dirección y el proceso
 	done
@@ -1464,11 +1469,11 @@ truncarMemoria(){
 		memoriaTruncada[$((i  )),0]="   "
 		memoriaTruncada[$((i+1)),0]="   "
 	done
-	memoriaTruncada[1,0]="${NC}BM|"
-	memoriaTruncada[1,$anchoTerminalBloques]="${memoriaTruncada[1,$anchoTerminalBloques]}|$tamMemoria"
-	#Escribe la última posición/tam memoria detrás de todos los strings
-	#memoriaTruncada[$(( (altoMemoriaTruncada*3) -2 )),$((anchoTerminalBloques-1))]="|$tamMemoria"
 
+	#Añade el título de la barra
+	memoriaTruncada[1,0]="${NC}BM|"
+	#Añade el fin de la barra (tamaño de memoria final)
+	memoriaTruncada[$ultimaI,$ultimaJ]="${memoriaTruncada[$ultimaI,$ultimaJ]}|$tamMemoria"
 
 }
 
@@ -1638,7 +1643,7 @@ truncarBarraCPU(){
 	local -i ultimaPosMemEmplazada=0
 	local    ultimoIndiceEncontrado=-1
 
-	colorearBarraTiempo
+	colorearBarraCPU
 
 	for (( i=1; i<= (altoLineaTiempoTruncada*3); i+=3 )); do
 		for ((j=1; j <= anchoTerminalBloques; j++)); do	#La barra de CPU empieza en 0
@@ -1682,9 +1687,12 @@ truncarBarraCPU(){
 		lineaTiempoTruncada[$((i+1)),0]="   "
 	done
 	lineaTiempoTruncada[$((1  )),0]="${NC}BT|"
+
+	#Fin barra (pone el proceso actual en CPU pero no dibuja la barra)
+		lineaTiempoTruncada[]
 }
 
-colorearBarraTiempo(){
+colorearBarraCPU(){
 	local colorProceso
 	local colorLetraProceso
 
