@@ -1,5 +1,7 @@
 #!/bin/bash
 
+declare -i PIDscript=$!
+
 # Nombre: global
 # Descripción: Es el bloque de código que alberga todas las variables globales
 # ¿Por qué usar una función global?
@@ -292,7 +294,7 @@ imprimirLCyan(){
 # Descripcion: se termina la ejecición del script
 fin_programa(){
 	imprimirLCyan "Saliendo del programa..."
-	exit 0   
+	kill -13 $PIDscript > /dev/null 2>&1
 }
 
 # Nombre: scanfSiNo
@@ -328,6 +330,20 @@ scanfNum(){
 	done
 	eval ${2}=$opcionN
 }
+
+# Nombre: esEntero
+# Descripción: Comprueba si el parámetro $1 es entero, y lanza un "true" al stdout
+# @param $1: Número a comprobar
+# return: "true o false" por un echo, hay que capturalo
+esEntero(){
+
+	if [[ "$1" =~ ^[0-9]+$ ]]; then
+		echo "true"
+	else
+		echo "false"
+	fi
+}
+
 
 # Nombre: scanfNumMinMax
 # Descripcion: asigna un valor entre un rango de numeros desde el teclado
@@ -947,7 +963,7 @@ imprimirTablaPredeterminada(){
 
 # Nombre: imprimirTabla
 # Descripcion: imprime las columnas del array procesos pasado como parámetro
-# Versión 2.0 (Original imprimirTablaOld())
+# Versión 2.0
 # Date: 6/03/2020
 # Nota 2020: Adaptada a los requisitos exigidos en el curso 18-19 y 19-20 (Tabla compacta roñosa)
 # @param $@ (todos): índice de las columnas que se quiere imprimir en pantalla
@@ -1257,7 +1273,7 @@ encontrarHuecoEnMemoria(){
 	fi
 }
 # Nombre: reubicarProcesos
-# date: 22/03/2020
+# date: 22/02/2020
 # Descripción: Reubica la memoria
 # Nota del autor: Si no hubiese hecho el array bidimensional, esto podría haber sído un simple oneLiner que ordenase el array de menor a mayor
 # 	(No he tenido en cuenta donde irían los nulls, pero podrían haber sido sustiutidos por 0 )
@@ -1304,7 +1320,7 @@ reubicarProcesos(){
 }
 
 # Nombre: DEV_modificarMemoria
-# Date: 27/01/2020
+# Date: 27/02/2020
 # Descripción: Función que permite manipular la memoria de forma manual. Diseñada para testear el comportamiento de esta. 
 DEV_modificarMemoria(){
 	local -i opcion
@@ -1495,11 +1511,13 @@ dibujarMemoria(){
 	done
 }
 
-# Nombre: aniadirSiguienteProcesoACPU
-# Date: 27/02/2020
-# Descripción: De entre todos los procesos en memoria, añade el proces con la prioridad más alta a CPU
-aniadirSiguienteProcesoACPU(){
-	#Si la prioridad menor es más baja que la mayor
+# Nombre: obtenerProcesoConMayorPrioridad
+# Descripción: De entre todos los procesos qeu están en memoria, selecciona el proceso con la prioridad más alta.
+# Nota: De entre dos procesosos con la misma prioridad, entra el que haya llegado antes a memoria.
+# Date: 23/03/2020
+# @Param $1: [return] Variable en la que almacenar el índice del proceso
+obtenerProcesoConMayorPrioridad(){
+		#Si la prioridad menor es más baja que la mayor
 	local -i prioridadMasAlta
 	local -i procesoConPrioridadMasAlta
 
@@ -1538,9 +1556,21 @@ aniadirSiguienteProcesoACPU(){
 			fi
 		fi
 	done
+	eval ${1}=${procesoConPrioridadMasAlta}
+
+}
+
+# Nombre: aniadirSiguienteProcesoACPU
+# Date: 27/02/2020
+# Descripción: De entre todos los procesos en memoria, añade el proces con la prioridad más alta a CPU
+aniadirSiguienteProcesoACPU(){
+	local -i siguienteProceso
+	
+	obtenerProcesoConMayorPrioridad "siguienteProceso"
 
 	#Guardamos el índice del proceso y actualizamos sus estados y tiempos
-	procesoCPU=$procesoConPrioridadMasAlta
+	procesoCPU=$siguienteProceso
+
 	procesos[$procesoCPU,$P_ESTADO]="$STAT_ENCPU"
 	procesos[$procesoCPU,$P_TRETORNO]=$(( tiempoEjecucion - ${procesos[$procesoCPU,$P_TLLEGADA]} ))
 	procesos[$procesoCPU,$P_TRESTANTE]=${procesos[$procesoCPU,$P_TEJECUCION]}
@@ -1668,6 +1698,69 @@ colorearBarraTiempo(){
 	
 }
 
+# Nombre: imprimirTiemposMedios
+# Descripción: Imprime el tiempo medio de Ejecución, Espera y Retorno con decimales
+# Date: 23/09/2020
+# @Param $1: Si es "mostrarEjecución" muestra el tiempo medio de ejecución
+imprimirTiemposMedios(){
+	#Tiempos Acumulados
+	local tEjecAcumulado=0
+	local tEsperaAcumulado=0
+	local tRetornoAcumulado=0
+
+	local nProcesosEjecucion=0
+	local nProcesosEspera=0
+	local nProcesosRetorno=0
+	#Tiempos medios
+	local tEjecMedio
+	local tEsperaMedio
+	local tRetornoMedio
+
+	if  [[ $memoriaLibre -eq $tamMemoria ]] || [[ $procEjecutado -ne 0 ]]; then
+		return
+	fi
+
+	calcularTiemposMedios(){
+
+		#Acumulador
+		for ((i=1; i<=numProc; i++));do
+			#Tiempo Ejecución Acumulado
+			if [[ $(esEntero "${procesos[$i,3]}") = "true" ]]; then
+				tEjecAcumulado=$(( tEjecAcumulado + ${procesos[$i,3]}))
+				((nProcesosEjecucion++))
+			fi
+			
+			#Tiempo Espera Acumulado
+			if [[ $(esEntero "${procesos[$i,8]}") = "true" ]]; then
+				tEsperaAcumulado=$(( tEsperaAcumulado + ${procesos[$i,8]}))
+				((nProcesosEspera++))
+			fi
+
+			#Tiempo Retorno Acumulado
+			if [[ $(esEntero "${procesos[$i,8]}") = "true" ]]; then
+				tRetornoAcumulado=$(( tRetornoAcumulado + ${procesos[$i,8]}))
+				((nProcesosRetorno++))
+			fi
+
+		done
+
+		tEjecMedio=$(echo "scale=2;$tEjecAcumulado/$nProcesosEjecucion" | bc -l)
+		tEsperaMedio=$(echo "scale=2;$tEsperaAcumulado/$nProcesosEspera" | bc -l)
+		tRetornoMedio=$(echo "scale=2;$tRetornoAcumulado/$nProcesosRetorno" | bc -l)
+	}
+
+	calcularTiemposMedios > /dev/null 2>&1
+
+	echo ""
+	
+	if [[ $1 = "mostrarEjecución" ]]; then
+		imprimirLCyan "Tiempo de ejecución medio: $BOLD$tEjecMedio"
+	fi
+	imprimirLCyan "Tiempo de espera medio: $BOLD$tEsperaMedio"
+	imprimirLCyan "Tiempo de retorno medio: $BOLD$tRetornoMedio"
+
+}
+
 # Nombre: dibujarEstadoCPU
 # Date: 09/03/2020
 # Descripción: Imprime el estado de la CPU por pantalla 
@@ -1699,6 +1792,16 @@ dibujarEstadoCPU(){
 	done
 }
 
+ejecucionApropiativo(){
+
+	if [[ $opcionApropiativo = "n" ]]; then
+		return 0
+	fi
+
+	#Aumentar el tiempo de retorno de los procesos "En Pausa"
+
+}
+
 # Nombre: ejecucion
 # Descripción: Loop central con la ejecución de los procesos
 ejecucion(){
@@ -1706,23 +1809,22 @@ ejecucion(){
 	local -i tiempoEjecucion=0
 	local -i i
 	local -i haHabidoUnCambio #bool que se usa para ver cuando ha ocurrido un evento. Los eventos suelen imprimir STRINGS especiales!
-	local tEjecAcumulado=0
-	local tEsperaAcumulado=0
-	local tRetornoAcumulado=0
+	archivoMensajes=$(mktemp) #archivo temporal que almacenará los textos que han aparecido durante la ejecución / es necesario para que el Tiempo salga antes que estos textos si ha habido un cambio
 	procesoCPU=0	#int que almacena la fila correspondiente al proceso que está en ejecución 
 	#Empieza la ejecucion del programa
 	memoriaLibre=$tamMemoria
 	vaciarMemoria
 	
 	while [[ $procEjecutados -lt $numProc ]]; do # mientras el numero de procesos ejecutados sea menor a procesos total
-		
+		echo -n "" > "$archivoMensajes" #vaciamos el archivo con los mensajes que aparecen durante la ejecución
 		haHabidoUnCambio=0
+		unset textosEjecucion
 
-		comprobarSiElProcesoEnCPUHaTerminado
-
+		comprobarSiElProcesoEnCPUHaTerminado >> "$archivoMensajes" #este método imprime un mensaje al sacar un proceso de CPU!
+		
 		#Si se ha ejecutado el último proceso, paramos el bucle para no tener ejecuciones en blanco
 		if [[ $procEjecutados -eq $numProc ]];then
-			imprimirLCyan "El último proceso ha sido desalojado con éxito de CPU y Memoria!"
+			imprimirLCyan "El último proceso ha sido desalojado con éxito de CPU y Memoria!" >> "$archivoMensajes"
 			break
 		fi
 
@@ -1731,8 +1833,7 @@ ejecucion(){
 		for((i=1;i<=numProc;i++)) do
 			if [[ ${procesos[$i,$P_TLLEGADA]} -eq "$tiempoEjecucion" ]]; then
 				anadirCola $i
-				
-				printf "${L_MAGENTA}%s ${procesos[$i,$P_COLORLETRA]}%s ${L_MAGENTA}%s ${NC}%d\n" "El proceso" "${procesos[$i,$P_NOMBRE]}" "ha entrado en el sistema en el instante" "$tiempoEjecucion"
+				printf "${L_MAGENTA}%s ${procesos[$i,$P_COLORLETRA]}%s ${L_MAGENTA}%s ${NC}%d\n" "El proceso" "${procesos[$i,$P_NOMBRE]}" "ha entrado en el sistema en el instante" "$tiempoEjecucion" >> "$archivoMensajes"
 				haHabidoUnCambio=1
 			fi
 		done
@@ -1741,9 +1842,8 @@ ejecucion(){
 		while (( tamCola >= 1 )); do
 			if [[ ${procesos[${cola[1]},$P_TAMANIO]} -le $memoriaLibre ]]; then
 				local -i procesoMem="${cola[1]}" #lo guardamos para poder hacer el printf tras añadir el procesos: Meramente estético (por si hay reubicabilidad, que salga después del mensaje)
-				aniadirProcesoAMemoria "$procesoMem"
-				printf "${L_GREEN}%s ${procesos[$procesoMem,$P_COLORLETRA]}%s ${L_GREEN}%s ${NC}%d\n" "El proceso" "${procesos[$procesoMem,$P_NOMBRE]}"  "ha sido introducido en memoria en el instante" "$tiempoEjecucion"	
-				
+				aniadirProcesoAMemoria "$procesoMem" >> "$archivoMensajes"	#al reubicar se imprime un mensaje!
+				printf "${L_GREEN}%s ${procesos[$procesoMem,$P_COLORLETRA]}%s ${L_GREEN}%s ${NC}%d\n" "El proceso" "${procesos[$procesoMem,$P_NOMBRE]}"  "ha sido introducido en memoria en el instante" "$tiempoEjecucion" >> "$archivoMensajes"	
 				haHabidoUnCambio=1
 			else
 				break
@@ -1754,25 +1854,31 @@ ejecucion(){
 		#Si no hay ningún proceso en CPU, o el proceso ha terminado && hay al menos 1 proc en mem.
 		if [[ $procesoCPU -eq 0 ]] && [[ $memoriaLibre -lt $tamMemoria ]]; then
 			aniadirSiguienteProcesoACPU
-			printf "${L_CYAN}%s ${procesos[$procesoCPU,$P_COLORLETRA]}%s ${L_CYAN}%s${NC} %d ${L_CYAN}%s\n${NC}" "El proceso" "${procesos[$procesoCPU,$P_NOMBRE]}" "ha sido introducido en la CPU en el instante" "$tiempoEjecucion" "y ahora se está ejecutando"
+			printf "${L_CYAN}%s ${procesos[$procesoCPU,$P_COLORLETRA]}%s ${L_CYAN}%s${NC} %d ${L_CYAN}%s\n${NC}" "El proceso" "${procesos[$procesoCPU,$P_NOMBRE]}" "ha sido introducido en la CPU en el instante" "$tiempoEjecucion" "y ahora se está ejecutando" >> "$archivoMensajes"
 			haHabidoUnCambio=1
+		elif [[ $memoriaLibre -lt $tamMemoria ]]; then
+
+			ejecucionApropiativo
+		
 		fi
 
 		calcularPosTodosProcesos
 
 		#Si ha habido un cambio/evento en el estado de algún proceso -> Salida por pantalla
 		if [[ $haHabidoUnCambio -eq 1 ]] || [[ $tiempoEjecucion -eq 0 ]]; then
+			echo -e "${B_WHITE}T: $tiempoEjecucion${NC}"
+			
+			cat "$archivoMensajes" #Visualizamos por pantalla los mensajes
+
 			echo "════════════════════════════════════════════════════════════════════════════"
-			
-			
 			imprimirTablaPredeterminada
-			echo -e "${B_WHITE}Instante: $tiempoEjecucion | P. más alta: $priorMax | P. más baja: $priorMin ${NC}"
+			echo -e "${B_WHITE}P. más alta: $priorMax | P. más baja: $priorMin ${NC}"
 			
 			dibujarMemoria "mostrarStatsMemoria"
 			
 			
-			dibujarEstadoCPU 
-			
+			dibujarEstadoCPU
+			imprimirTiemposMedios
 			imprimirLCyan "Número de procesos ejecutados $procEjecutados/$numProc"
 
 			#breakpoint "Fin del loop $tiempoEjecucion del WHILE"
@@ -1786,30 +1892,20 @@ ejecucion(){
 	pantallaFinal(){
 		local -i
 
-		for ((i=1; i<=numProc; i++));do
-			tEjecAcumulado=$(( tEjecAcumulado + ${procesos[$i,3]}))
-			tEsperaAcumulado=$(( tEsperaAcumulado + ${procesos[$i,7]}))
-			tRetornoAcumulado=$(( tRetornoAcumulado + ${procesos[$i,8]}))
-		done
-		echo "════════════════════════════════════════════════════════════════════════════"
-		tEjecMedio=$(echo "scale=2;$tEjecAcumulado/$procEjecutados" | bc -l)
-		tEsperaMedio=$(echo "scale=2;$tEsperaAcumulado/$procEjecutados" | bc -l)
-		tRetornoMedio=$(echo "scale=2;$tRetornoAcumulado/$procEjecutados" | bc -l)
+
 
 		imprimirTablaPredeterminada
 		echo "════════════════════════════════════════════════════════════════════════════"
+		imprimirTiemposMedios "mostrarEjecución"
 		echo "Tiempo de ejecución Total: $tiempoEjecucion"
 		echo "Prioridad más alta: $priorMax"
 		echo "Prioridad más baja: $priorMin"
-		imprimirLCyan "Tiempo de ejecución medio: $BOLD$tEjecMedio"
-		imprimirLCyan "Tiempo de espera medio: $BOLD$tEsperaMedio"
-		imprimirLCyan "Tiempo de retorno medio: $BOLD$tRetornoMedio"
 		dibujarMemoria
 		dibujarEstadoCPU
 
 		echo -e "\n\n"
 	}
-
+	rm "$archivoMensajes"
 	pantallaFinal 
 }
 
@@ -1881,8 +1977,7 @@ renombrarDatosEntrada(){
 #main
 main(){
 	
-	imprimir
-	Cabecera 
+	imprimirCabecera 
 	cargaDatos 
 	escribeDatos 
 	ordenarProcesos
