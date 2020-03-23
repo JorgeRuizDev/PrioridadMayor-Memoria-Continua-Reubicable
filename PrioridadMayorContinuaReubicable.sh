@@ -1590,8 +1590,8 @@ ejecutarUnCiloDeCPU(){
 	lineaEstadoCPU+=("$procesoCPU")
 	
 	#aumenta el tiempo de espera de los procesoso en memoria y en cola
-	for((i=1;i<=numProc;i++)) do
-		if [[ ${procesos[$i,$P_ESTADO]} == "$STAT_MEMO" ]] || [[ ${procesos[$i,$P_ESTADO]} == "$STAT_COLA" ]] ; then
+	for((i=1;i<=numProc;i++)); do
+		if [[ ${procesos[$i,$P_ESTADO]} == "$STAT_MEMO" ]] || [[ ${procesos[$i,$P_ESTADO]} == "$STAT_COLA" ]] ||  [[ ${procesos[$i,$P_ESTADO]} == "$STAT_APROP_PAUSA" ]]; then
 			((procesos[$i,$P_TESPERA]++))
 		fi
 	done
@@ -1716,7 +1716,7 @@ imprimirTiemposMedios(){
 	local tEsperaMedio
 	local tRetornoMedio
 
-	if  [[ $memoriaLibre -eq $tamMemoria ]] || [[ $procEjecutado -ne 0 ]]; then
+	if  [[ $memoriaLibre -eq $tamMemoria ]] || [[ $procEjecutados -ne 0 ]]; then
 		return
 	fi
 
@@ -1793,12 +1793,33 @@ dibujarEstadoCPU(){
 }
 
 ejecucionApropiativo(){
+	opcionApropiativo="s" #Forzamos el algoritmo para testeo
 
 	if [[ $opcionApropiativo = "n" ]]; then
 		return 0
 	fi
+	
+	local -i procesoCandidato=0
+	local -i procesoExpulsado=$procesoCPU
 
-	#Aumentar el tiempo de retorno de los procesos "En Pausa"
+	obtenerProcesoConMayorPrioridad procesoCandidato
+	
+	#Si tienen la misma prioridad, no hacemos nada
+	if [[ ${procesos[$procesoCandidato,$P_PRIORIDAD]} -eq ${procesos[$procesoCPU,$P_PRIORIDAD]} ]]; then
+		return 0
+	fi
+
+	printf "${L_CYAN}%s ${procesos[$procesoExpulsado,$P_COLORLETRA]}%s ${L_CYAN}%s ${procesos[$procesoCandidato,$P_COLORLETRA]}%s ${L_CYAN}%s ${NC}\n" \
+	"El proceso" "${procesos[$procesoExpulsado,$P_NOMBRE]}" "ha sido expulsado de CPU y ahora" "${procesos[$procesoCandidato,$P_NOMBRE]}" "está en ejecución."
+	
+	procesoCPU=$procesoCandidato
+
+	#Actualizamos el proceso que estaba en CPU
+	procesos[$procesoExpulsado,$P_ESTADO]="$STAT_APROP_PAUSA"
+	
+	
+	#Actualizamos el proceso que hemos metido en CPU
+	procesos[$procesoCPU,$P_ESTADO]="$STAT_ENCPU"
 
 }
 
@@ -1857,9 +1878,8 @@ ejecucion(){
 			printf "${L_CYAN}%s ${procesos[$procesoCPU,$P_COLORLETRA]}%s ${L_CYAN}%s${NC} %d ${L_CYAN}%s\n${NC}" "El proceso" "${procesos[$procesoCPU,$P_NOMBRE]}" "ha sido introducido en la CPU en el instante" "$tiempoEjecucion" "y ahora se está ejecutando" >> "$archivoMensajes"
 			haHabidoUnCambio=1
 		elif [[ $memoriaLibre -lt $tamMemoria ]]; then
-
-			ejecucionApropiativo
-		
+			ejecucionApropiativo >> "$archivoMensajes" #La función lanza un mensaje
+			haHabidoUnCambio=1
 		fi
 
 		calcularPosTodosProcesos
