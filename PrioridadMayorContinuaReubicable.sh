@@ -21,7 +21,7 @@ global(){
 	#Array con la cola | Empieza en 1, por lo que el valor 0 siempre se podrá saltar 
 	#(nota alumno 2020: Lo arrays empiezan siempre en 0, pero paso de cambiarlo, ten en cuenta que la mayoría de los arrays de esta práctica empiezan en 1, además igual en bash da problemas)
 	declare -a cola
-	declare -r numCol=5		#FIXME: Sin uso/referencia encontrada de momento (Estaba desde 2018), igual borrar
+	declare -r numCol=5		#Número de columnas que hay en la carga de archivos
 	declare -i numProc=0
 
 	# Índice que almacena el proceso que está ejécutándose en CPU
@@ -508,6 +508,7 @@ cargaDatos(){
 	1)
 		menuAlgoritmo
 		clear
+		imprimirLCyan "Has elegido Apropiativo: $opcionApropiativo"
 		#imprimirLCyan "Has elegido Apropiativo: $opcionApropiativo y Estatico: $opcionEstatico"
 		scanfNum "¿Tamaño de la memoria?: " tamMemoria 1
 		scanfNumMinMax "¿Prioridad mínima?" priorMin -10000 10000 
@@ -542,6 +543,7 @@ menuAlgoritmo(){
  ║${NC}${B_BLUE} ¿Como quieres el algoritmo?                ${NC}${L_YELLOW}║
  ║                                            ║
  ║${NC} 1-Estándar                                 ${L_YELLOW}║
+ ║${NC} 2-Apropiativo                              ${L_YELLOW}║
  ║${NC} 5-Ayuda (glosario)                         ${L_YELLOW}║
  ║${NC} 6-Salir del programa                       ${L_YELLOW}║
  ║                                            ║
@@ -565,15 +567,15 @@ menuAlgoritmo(){
  ║${NC}${B_L_GREEN} No apropiativo:${NC} El proceso que se está ejecutando no puede ser                  ${L_YELLOW}║
  ║${NC} expulsado de la memoria, solo sale cuando termina su tiempo de ejecución.       ${L_YELLOW}║
  ║                                                                                 ║
- ║${NC}${B_L_GREEN} Estático:${NC} La prioridad de los procesos en memoria no disminuyen                 ${L_YELLOW}║
- ║${NC} a lo largo de la ejecución de los procesos.                                     ${L_YELLOW}║
- ║                                                                                 ║
- ║${NC}${B_L_GREEN} Dinámico:${NC} La prioridad de los procesos en memoria disminuyen                   ${L_YELLOW} ║
- ║${NC} a lo largo de la ejecución de los procesos. En este script se                   ${L_YELLOW}║
- ║${NC} disminuirá (prioridad Menor) en uno al finalizar la ejecución de un proceso.    ${L_YELLOW}║
- ║${NC} En caso contrario aumentará al finalizar la ejecución de un proceso.            ${L_YELLOW}║
- ║                                                                                 ║
  ╚═════════════════════════════════════════════════════════════════════════════════╝${NC}\n"
+ #║${NC}${B_L_GREEN} Estático:${NC} La prioridad de los procesos en memoria no disminuyen                 ${L_YELLOW}║
+ #║${NC} a lo largo de la ejecución de los procesos.                                     ${L_YELLOW}║
+ #║                                                                                 ║
+ #║${NC}${B_L_GREEN} Dinámico:${NC} La prioridad de los procesos en memoria disminuyen                   ${L_YELLOW} ║
+ #║${NC} a lo largo de la ejecución de los procesos. En este script se                   ${L_YELLOW}║
+ #║${NC} disminuirá (prioridad Menor) en uno al finalizar la ejecución de un proceso.    ${L_YELLOW}║
+ #║${NC} En caso contrario aumentará al finalizar la ejecución de un proceso.            ${L_YELLOW}║
+ #║                                                                                 ║
 		imprimirLCyan "Pulse [Intro] para salir de la ayuda" -n
 		read -ers
 		menuAlgoritmo;;
@@ -745,6 +747,7 @@ selectorFichero(){
 
 # Nombre: datosFichero
 # Descripcion: Opción 2: Por datos. Recoge todos los datos a través del fichero
+# Date: 24/03/2020 Actualización: Añadida memoria + apropiativo
 datosFichero(){
 	local -i i
 	local -i j
@@ -768,13 +771,22 @@ datosFichero(){
 		#sed -n 1p coge la linea 1 y cut -d ":" -f 2 la columna 2 delimitado por :
 		tamMemoria=`sed -n 1p "$nomFile" | cut -d ":" -f 2`
 		opcionApropiativo=`sed -n 2p "$nomFile" | cut -d ":" -f 2`
-		opcionEstatico=`sed -n 3p "$nomFile" | cut -d ":" -f 2`
-		priorMin=`sed -n 4p "$nomFile" | cut -d ":" -f 2`
-		priorMax=`sed -n 5p "$nomFile" | cut -d ":" -f 2`
-		for (( i=1,k=7; k<=numLineas; i++,k++)) do
+		#opcionEstatico=`sed -n 3p "$nomFile" | cut -d ":" -f 2`
+		priorMin=`sed -n 3p "$nomFile" | cut -d ":" -f 2`
+		priorMax=`sed -n 4p "$nomFile" | cut -d ":" -f 2`
+		for (( i=1,k=6; k<=numLineas; i++,k++)) do
 			((numProc++))
-			for (( j=1; j<=numCol; j++ )) do
-				procesos[$i,$j]=`sed -n ${k}p "$nomFile"| cut -d "	" -f $j`
+
+			#Asignación del nombre del proceso
+			if [[ $numProc -lt 10 ]]; then
+				procesos[$i,$P_NOMBRE]="P0${numProc}"
+			else
+				procesos[$i,$P_NOMBRE]="P${numProc}"
+			fi	
+
+			for (( j=1; j<numCol; j++ )) do
+				#j es una más, porque la columna de los procesos no se lee de archivo
+				procesos[$i,$((j+1))]=$(sed -n ${k}p "$nomFile"| cut -d "	" -f $j)
 			done
 		done
 		comprobarDatosFichero
@@ -883,12 +895,13 @@ escribeDatos(){
 
 	echo "Tamaño Memoria:$tamMemoria" > ${DATA_DIRECTORY}datos.txt
 	echo "Apropiativo:$opcionApropiativo" >> ${DATA_DIRECTORY}datos.txt
-	echo "Estatico:$opcionEstatico" >> ${DATA_DIRECTORY}datos.txt
+	#echo "Estatico:$opcionEstatico" >> ${DATA_DIRECTORY}datos.txt
 	echo "Prioridad Mínima:$priorMin" >> ${DATA_DIRECTORY}datos.txt
 	echo "Prioridad Máxima:$priorMax" >> ${DATA_DIRECTORY}datos.txt
-	echo -e "Nombre\tT.Lleg\tT.Ejec\tPrior\tTamaño" >> ${DATA_DIRECTORY}datos.txt
+	#echo -e "Nombre\tT.Lleg\tT.Ejec\tPrior\tTamaño" >> ${DATA_DIRECTORY}datos.txt
+	echo -e "T.Lleg\tT.Ejec\tPrior\tTamaño" >> ${DATA_DIRECTORY}datos.txt
 	for (( i=1; i<=numProc; i++ )) do
-		for(( j=1; j<=numCol; j++ )) do
+		for(( j=2; j<=numCol; j++ )) do
 			echo -e -n "${procesos[$i,$j]}\t" >> ${DATA_DIRECTORY}datos.txt
 		done
 		echo  >> ${DATA_DIRECTORY}datos.txt
@@ -1208,8 +1221,7 @@ eliminarProcesoDeMemoria(){
 # Date: 22/02/2020
 # @param $1: Tamaño del proceso
 # @param $2/return: Variable en la que se almacenará el valor de salida de esta función
-# @return posición en la que empieza el huevo ó null si no hay suficiente hueco.
-# 	return por stdout, es necesario = la llamada de la función a una variable para "capturar" el return.
+# @return posición en la que empieza el hueco ó null si no hay suficiente hueco.
 ajustarMemoriaParaElProceso(){
 	local posicionEnLaQueEmpiezaElHuecoEnMemoria	
 	
@@ -1816,7 +1828,7 @@ imprimirTiemposMedios(){
 
 
 ejecucionApropiativo(){
-	opcionApropiativo="s" #Forzamos el algoritmo para testeo
+	
 
 	if [[ $opcionApropiativo = "n" ]]; then
 		return 0
@@ -1842,7 +1854,6 @@ ejecucionApropiativo(){
 
 	#Actualizamos el proceso que estaba en CPU
 	procesos[$procesoExpulsado,$P_ESTADO]="$STAT_APROP_PAUSA"
-	
 	
 	#Actualizamos el proceso que hemos metido en CPU
 	procesos[$procesoCPU,$P_ESTADO]="$STAT_ENCPU"
@@ -2044,15 +2055,15 @@ main(){
 	
 
 
-	echo -e "
-	╔═══════════════════════════════════════╗
-	║					║
-	║${L_GREEN} Tamaño de Memoria: ${NC}${B_BLUE}$tamMemoria${NC}			║
-	║${L_GREEN} Número de Procesos: ${NC}${B_BLUE}$numProc ${NC}		║
-	║${L_GREEN} Prioridad Mínima: ${NC}${B_BLUE}$priorMin${NC}			║
-	║${L_GREEN} Prioridad Máxima: ${NC}${B_BLUE}$priorMax${NC}			║
-	║					║
-	╚═══════════════════════════════════════╝"
+printf " ${L_YELLOW}%s" "╔═══════════════════════════════════════╗${NC}"
+printf " ${L_YELLOW}║ ${L_GREEN}%s"
+							
+	${L_GREEN} Tamaño de Memoria: ${NC}${B_BLUE}$tamMemoria${NC}		
+	${L_GREEN} Número de Procesos: ${NC}${B_BLUE}$numProc${NC}		
+	${L_GREEN} Prioridad Mínima: ${NC}${B_BLUE}$priorMin${NC}		
+	${L_GREEN} Prioridad Máxima: ${NC}${B_BLUE}$priorMax${NC}		
+							
+	═══════════════════════════════════════
 	
 	imprimirLCyan "Pulse [enter] para continuar" -n
 	read -ers
