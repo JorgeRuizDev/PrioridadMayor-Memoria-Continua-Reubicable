@@ -1485,7 +1485,7 @@ dibujarMemoria(){
 	local memoriaEnUsoPorciento #Es un string al ser float
 	declare -A memoriaTruncada
 	declare -i anchoTerminal=$(tput cols) #En columnas
-	declare -i anchoTerminalBloques=$(( anchoTerminal/3 - 3)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color || restamos unidades para dejar margen para maniobrar
+	declare -i anchoTerminalBloques=$(( anchoTerminal/3 - 2)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color || restamos unidades para dejar margen para maniobrar
 	declare -i altoMemoriaTruncada
 	
 	#Calculamos el alto de memoria (el número de filas que ocupará truncada)
@@ -1643,6 +1643,9 @@ truncarBarraCPU(){
 	local -i ultimaPosMemEmplazada=0
 	local    ultimoIndiceEncontrado=-1
 
+	#Últimas i,j -> Almacena la última posición en la que se dibuja memoria, para añadir al final de la barra el número con la memoria total
+	local -i ultimaI
+	local -i ultimaJ
 	colorearBarraCPU
 
 	for (( i=1; i<= (altoLineaTiempoTruncada*3); i+=3 )); do
@@ -1657,9 +1660,9 @@ truncarBarraCPU(){
 				
 				#Fila de los nombres
 				if [[ $ultimoIndiceEncontrado -eq 0 ]]; then #Si el hueco está vacío (al no haber proceso, CPU vacía en ese instante)
-					lineaTiempoTruncada[$((i-1)),$j]="   "
+					lineaTiempoTruncada[$((i-1)),$j]="${NC}---"
 				else
-					lineaTiempoTruncada[$((i-1)),$j]=${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
+					lineaTiempoTruncada[$((i-1)),$j]=${NC}${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
 				fi
 
 				#Fila de las posiciones
@@ -1674,7 +1677,8 @@ truncarBarraCPU(){
 			fi
 
 			((ultimaPosMemEmplazada++))
-
+			ultimaI=$i
+			ultimaJ=$j
 			if [[ $ultimaPosMemEmplazada -gt $tiempoEjecucion ]];then break; fi	#Se ha emplazado toda la memoria
 		done
 			ultimoIndiceEncontrado=-1 #reseteo para que se imprima siempre en cada línea la dirección y el proceso
@@ -1689,7 +1693,11 @@ truncarBarraCPU(){
 	lineaTiempoTruncada[$((1  )),0]="${NC}BT|"
 
 	#Fin barra (pone el proceso actual en CPU pero no dibuja la barra)
-		lineaTiempoTruncada[]
+
+	if [[ $procesoCPU -ne 0 ]]; then
+		lineaTiempoTruncada[$((ultimaI-1)),$ultimaJ]="${NC}${procesos[$procesoCPU,$P_NOMBRE]}"
+		lineaTiempoTruncada[$ultimaI,$ultimaJ]="${NC}${lineaTiempoTruncada[$ultimaI,$ultimaJ]}|"
+	fi
 }
 
 colorearBarraCPU(){
@@ -1707,6 +1715,36 @@ colorearBarraCPU(){
 		barraTiempoColor+=("${colorProceso}${colorLetraProceso}[=]${NC}") #3 espacios porque es el ancho del proceso que desea el profesor
 	done
 	
+}
+# Nombre: dibujarEstadoCPU
+# Date: 09/03/2020
+# Descripción: Imprime el estado de la CPU por pantalla 
+dibujarEstadoCPU(){
+	local -i
+	declare -i anchoTerminal=$(tput cols) #En columnas
+	declare -i anchoTerminalBloques=$((anchoTerminal/3 - 2)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color || restamos 1 unidad para dejar margen para maniobrar
+	declare -A lineaTiempoTruncada
+	declare -i altoLineaTiempoTruncada
+	
+	#Calculamos el alto de memoria (el número de filas que ocupará truncada)
+	if [[ $((tiempoEjecucion%anchoTerminalBloques)) == 0 ]];then
+		if [[ tiempoEjecucion -eq 0 ]]; then #Con tiempo 0 la CPU está vacía, pero queremos mostrarla, por lo que hay que forzar el valor a 1
+			altoLineaTiempoTruncada=1
+		else
+			altoLineaTiempoTruncada=$((tiempoEjecucion/anchoTerminalBloques))
+		fi
+	else	#Si la memoria ocupa parte de una líena, la asignamos entera
+		altoLineaTiempoTruncada=$(( ( tiempoEjecucion/anchoTerminalBloques ) + 1 ))
+	fi
+
+	truncarBarraCPU
+
+	for (( i= 0; i<= 3*altoLineaTiempoTruncada; i++ ));do
+		for (( j=0; j<=anchoTerminalBloques ; j++));do
+			echo -en "${lineaTiempoTruncada[$i,$j]}"
+		done
+		echo ""
+	done
 }
 
 # Nombre: imprimirTiemposMedios
@@ -1776,36 +1814,6 @@ imprimirTiemposMedios(){
 	
 }
 
-# Nombre: dibujarEstadoCPU
-# Date: 09/03/2020
-# Descripción: Imprime el estado de la CPU por pantalla 
-dibujarEstadoCPU(){
-	local -i
-	declare -i anchoTerminal=$(tput cols) #En columnas
-	declare -i anchoTerminalBloques=$((anchoTerminal/3 - 3)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color || restamos 1 unidad para dejar margen para maniobrar
-	declare -A lineaTiempoTruncada
-	declare -i altoLineaTiempoTruncada
-	
-	#Calculamos el alto de memoria (el número de filas que ocupará truncada)
-	if [[ $((tiempoEjecucion%anchoTerminalBloques)) == 0 ]];then
-		if [[ tiempoEjecucion -eq 0 ]]; then #Con tiempo 0 la CPU está vacía, pero queremos mostrarla, por lo que hay que forzar el valor a 1
-			altoLineaTiempoTruncada=1
-		else
-			altoLineaTiempoTruncada=$((tiempoEjecucion/anchoTerminalBloques))
-		fi
-	else	#Si la memoria ocupa parte de una líena, la asignamos entera
-		altoLineaTiempoTruncada=$(( ( tiempoEjecucion/anchoTerminalBloques ) + 1 ))
-	fi
-
-	truncarBarraCPU
-
-	for (( i= 0; i<= 3*altoLineaTiempoTruncada; i++ ));do
-		for (( j=0; j<=anchoTerminalBloques ; j++));do
-			echo -en "${lineaTiempoTruncada[$i,$j]}"
-		done
-		echo ""
-	done
-}
 
 ejecucionApropiativo(){
 	opcionApropiativo="s" #Forzamos el algoritmo para testeo
@@ -1957,10 +1965,12 @@ abrirInforme(){
 	imprimirLCyan "Qué desea visualizar?"
 	echo "  1) Informe a color completo (con \$cat)"
 	echo "  2) Informe a color con scroll (con \$less, estilo Editor VI)"
-	echo "  3) Informe en blanco y negro completo(con \$cat)"
-	echo "  4) Informe en blanco y negro con scroll (con \$less, estilo Editor VI)"
-	echo "  5) Editar Informe blanco y negro con VIM"
-	echo "  6) Editar Informe blanco y negro con NANO"
+	echo "  3) Informe a color secuencial (con \$more)"
+	echo "  4) Informe en blanco y negro completo(con \$cat)"
+	echo "  5) Informe en blanco y negro con scroll (con \$less, estilo Editor VI)"
+	echo "  6) Informe en blanco y negro secuencial (con \$more)"
+	echo "  7) Editar Informe blanco y negro con VIM"
+	echo "  8) Editar Informe blanco y negro con NANO"
 	echo "  *) Salir"
 
 	read -r opcion
@@ -1973,15 +1983,21 @@ abrirInforme(){
 		less -R "$INFORME_FILENAME"
 	;;
 	3)
-		cat "$INFORMEBN_FILENAME"
+		more "$INFORME_FILENAME"
 	;;
 	4)
-		less "$INFORMEBN_FILENAME"
+		cat "$INFORMEBN_FILENAME"
 	;;
 	5)
-		vim "$INFORMEBN_FILENAME"
+		less "$INFORMEBN_FILENAME"
 	;;
 	6)
+		more "$INFORME_FILENAME"
+	;;
+	7)
+		vim "$INFORMEBN_FILENAME"
+	;;
+	8)
 		nano "$INFORMEBN_FILENAME"
 	;;
 	*)
