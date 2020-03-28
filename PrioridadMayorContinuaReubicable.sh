@@ -1091,12 +1091,7 @@ imprimirTiemposMedios(){
 
 		#Acumulador
 		for ((i=1; i<=numProc; i++));do
-			#Tiempo Ejecución Acumulado
-			#if [[ $(esEntero "${procesos[$i,3]}") = "true" ]]; then
-			#	tEjecAcumulado=$(( tEjecAcumulado + ${procesos[$i,3]}))
-			#	((nProcesosEjecucion++))
-			#fi
-			
+
 			#Tiempo Espera Acumulado
 			if [[ $(esEntero "${procesos[$i,8]}") = "true" ]]; then
 				tEsperaAcumulado=$(( tEsperaAcumulado + ${procesos[$i,$P_TESPERA]}))
@@ -1111,8 +1106,6 @@ imprimirTiemposMedios(){
 
 		done
 
-		#obsoleto
-		#tEjecMedio=$(echo "scale=2;$tEjecAcumulado/$nProcesosEjecucion" | bc -l)
 		tEsperaMedio=$(echo "scale=2;$tEsperaAcumulado/$nProcesosEspera" | bc -l)
 		tRetornoMedio=$(echo "scale=2;$tRetornoAcumulado/$nProcesosRetorno" | bc -l)
 
@@ -1125,7 +1118,6 @@ imprimirTiemposMedios(){
 
 	imprimirLCyan "Tiempo de espera medio: $BOLD$tEsperaMedio || " "-n"
 	imprimirLCyan    "Tiempo de retorno medio: $BOLD$tRetornoMedio"
-	#imprimirLCyan "Tiempo de ejecución medio: $BOLD$tEjecMedio"
 	
 }
 
@@ -1215,12 +1207,6 @@ dibujarMemoria(){
 		imprimirLCyan "Uso de memoria: $memoriaEnUso/$tamMemoria ($memoriaEnUsoPorciento%) -> Memoria libre: $memoriaLibre"
 	fi
 
-	#for((i=1;i<=tamMemoria;i++)); do #Imprime los índices de memoria para mejorar el flujo
-	#	break
-	#	echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
-	#done
-	#echo "" #salto de línea
-
 	truncarMemoria 	#Imprimimos la memoria truncada
 	for (( i=0; i< 3*altoMemoriaTruncada; i++ ));do
 		
@@ -1301,6 +1287,10 @@ truncarBarraCPU(){
 		lineaTiempoTruncada[$((ultimaI-1)),$ultimaJ]="${NC}${procesos[$procesoCPU,$P_NOMBRE]}"
 		lineaTiempoTruncada[$ultimaI,$ultimaJ]="${NC}${lineaTiempoTruncada[$ultimaI,$ultimaJ]}|"
 		lineaTiempoTruncada[$((ultimaI+1)),$ultimaJ]="${NC}$tiempoEjecucion"
+	elif [[ $numProc -eq $procEjecutados ]]; then #Si es el final de la ejecución (Se han ejecutado todos los procesos)
+		lineaTiempoTruncada[$((ultimaI-1)),$ultimaJ]=""
+		lineaTiempoTruncada[$ultimaI,$ultimaJ]="${NC}|$tiempoEjecucion" # ponemos al final de la barra | tamaño memoria
+		lineaTiempoTruncada[$((ultimaI+1)),$ultimaJ]=""
 	fi
 }
 
