@@ -1,6 +1,8 @@
 #!/bin/bash
 
 declare -i PIDscript=$!
+declare -a argumentosEntrada=$@
+
 
 # Nombre: global
 # Descripción: Es el bloque de código que alberga todas las variables globales
@@ -11,39 +13,7 @@ declare -i PIDscript=$!
 # Date: Pues no lo sé
 global(){
 
-	#declaracion de variables
-
-	#TODO: Borrar cosas inexistentes.
-	declare opcionApropiativo
-	declare opcionEstatico
-
-
-	#Array con la cola | Empieza en 1, por lo que el valor 0 siempre se podrá saltar 
-	#(nota alumno 2020: Lo arrays empiezan siempre en 0, pero paso de cambiarlo, ten en cuenta que la mayoría de los arrays de esta práctica empiezan en 1, además igual en bash da problemas)
-	declare -a cola
-	declare -r numCol=5		#Número de columnas que hay en la carga de archivos
-	declare -i numProc=0
-
-	# Índice que almacena el proceso que está ejécutándose en CPU
-	declare -i procesoCPU=0
-
-
-	declare -i priorMin
-	declare -i priorMax			
-		
-	declare -i tamCola=0
-	declare tipoPrioridad
-
-
-	#Según Necesidades (2020):
-	declare tamMemoria=15
-	declare memoriaLibre
-	declare -a lineaEstadoCPU
-
-
-
-		
-	#Colores de texto
+	#Colores de texto -> Los asignamos ahora porque hay variables globales que los utilizan
 	#ejemplo: echo -e "${B_RED}texto en rojo negrita${GREEN}texto en verde${NC}"
 	declare -a coloresLetras
 	declare -r DEFAULT='\e[39m' #Color por defecto
@@ -109,16 +79,70 @@ global(){
 
 	coloresFondo=("$_RED" "$_GREEN" "$_YELLOW" "$_BLUE" "$_MAGENTA" "$_CYAN")
 
-	# Memoria según necesidades es el array bidimensional en el que se almacenará la información de la memoria
-	# No tengo intención de hacer un algoritmo eficiente para la memoria, por el simple hecho de 
-	# que puede ser poco intuitivo para alumnos de primero
+
+	# VARIABLES GLOBALES
+
+	# Variable que almacena el estado del apropiativo (s/n) -> introducido por teclado o fichero
 	#
-	# Más adelante se explicará como estarán organizadas estas capas de memoria, y el contenido específico que almacenará cada capa
+	declare opcionApropiativo
+	#
+	# Variable que almacena la opción de estático/dinámico / sin implementar.
+	#
+	declare opcionEstatico
+
+	#Array con la cola | Empieza en 1, por lo que el valor 0 siempre se podrá saltar 
+	#(nota alumno 2020: Lo arrays empiezan siempre en 0, pero paso de cambiarlo, ten en cuenta que la mayoría de los arrays de esta práctica empiezan en 1, además igual en bash da problemas)
+	declare -a cola
+
+	# Constante:
+	# Numúmero de columnas -> Número de columnas que hay en la carga de archivos
+	declare -r numCol=5
+
+	# Número de procesos introducido / a ser ejecutados
+	#		
+	declare -i numProc=0
+	
+	# Índice que almacena el proceso que está ejécutándose en CPU
+	# Se ajusta sólo durante la entrada de datos
+	declare -i procesoCPU=0
+
+	# Prioridades: Almacenan la prioridad mínima y máxima, introducidos durante la entrada.
+	#
+	declare -i priorMin
+	declare -i priorMax			
+	
+	# String que almacena el tipo de prioridad -gt o -lt -> ya que la p.Máx puede ser un número más pequeño qpe p.Min
+	# Modificado en establecerPrioridad()
+	declare tipoPrioridad
+
+	# Tamaño de la cola ordena con los procesos que han entrado al sistema y están esperando para entrar a memoria.
+	#
+	declare -i tamCola=0
+	
+	# Tamaño de la memoria que vamos a usar durante la ejecución, se introduce en la entrada,
+	#
+	declare tamMemoria
+
+	# Entero que almacena la memoria libre, varía con la introucción o el borrado de procesos de memoria
+	#
+	declare memoriaLibre
+
+	# Array que almacena por cada posición ( de 0 a infinito ) el número correspondiente al proceso que se encuentra en dicho intervalo en CPU.
+	# Se usa para dibujar más adelante la barra de CPU/tiempo
+	declare -a lineaEstadoCPU
+
+
+	# Memoria según necesidades es el array bidimensional en el que se almacenará la información de la memoria.
+	# El array tiene DOS capas ($MEM_INDICE que es la capa 0) y (MEM_TOSTRING que es la capa 1)
+	# El array tiene M huecos, cada hueco corresponde a una posición de memoria. Las posiciones empiezan en 1
+	# Ejemplo de acceso/mod array para asignar un proceso:
+	#		memoriaSegunNecesidades[1,0]==memoriaSegunNecesidades[1,$MEM_INDICE]=8 -> en la pos 1 hay una unidad de mem del proceso 8
+	# Es necesario asignar el string a imprimir
+	#		memoriaSegunNecesidades[1,$MEM_TOSTRING]=${FondoRojo}$MEM_STRING_HUECOSINCOLOR${FondoNeutro}
+	#	Como se puede observar, asignamos el color, y el string que queremos imprimir, en nuestro caso dicho string lo tenemos como variable global,
+	#	para que al modificar el string, se cambien todas las asignaciones (comodidad)
+	#
 	declare -A memoriaSegunNecesidades
-	#La memoria será un array bidimensional con 2 capas y M huecos, siendo M = tamMemoria
-	#Así podremos almacenar que proceso se almacena en cada hueco.
-	#Y en la capa MEM_INDICE guardar el índice/id del proceso (fila que ocupa en la tabla)
-	#Y en la capa MEM_TOSTRING string con el color ya generado
 
 	#Capa donde se guardaran los índices/Apuntadores/punteros de el proceso que se encuentra en cada posición de memoria respecto a la tabla de $procesos[]
 	declare -r MEM_INDICE=0	
@@ -126,21 +150,14 @@ global(){
 	#Capa donde se almacena el texto a imprimir
 	declare -r MEM_TOSTRING=1
 
-		#Declares de los contenidos por defecto de la MEMORIA
+	# Declares de los contenidos por defecto de la MEMORIA -> igual se podría poner un 0, pero no lo he probado, y funciona bien de momento.
 	declare -r MEM_HUECO_VACIO="null"
-		#Valores que se imprimen por pantalla
+
+	# Strings de memoria que se imprimirán
+	#		Hueco vacío, se imprimen unos corchetes blancos con fondo blanco
 	declare -r MEM_STRING_HUECO_VACIO="$_WHITE${WHITE}[_]${_DEFAULT}"
+	#		Hueco con proceso: Se imrprimen unos corchetes con gorritos, es necesario colorearlos.
 	declare -r MEM_STRING_HUECOSINCOLOR="[^]"	#Se colorea con el color del proceso
-
-	#	######################################
-	#	Declares 2020:
-	#	######################################
-
-	# Variable de control de BREAKPOINTS 
-	#//@see breakpoint
-	declare -r BREAKPOINT_ENABLED=true
-	declare -r BREAKPOINT_AUTO=false
-	declare -r BREAKPOINT_AUTO_TIMEOUT="0.5"
 
 
 	#Tabla PROCESOS:
@@ -158,7 +175,6 @@ global(){
 	declare -r P_TRESTANTE=6	#	$P_TRESTANTE
 	declare -r P_TESPERA=7		#	$P_TESPERA
 	declare -r P_TRETORNO=8		#	$P_TRETORNO -> Tespera + Tejecución = Tfinal – Tllegada
-
 	declare -r P_ESTADO=9		#	$P_ESTADO
 
 	#Valores 2020:
@@ -167,10 +183,6 @@ global(){
 	declare -r P_POSINI=12		#Posición de inicio en la memoria
 	declare -r P_POSFIN=13		#Posición donde termina el proceso en la memoria
 
-
-		#Array que almacena el número de huecos máximo que puede ocupar el string a imprimir de cada proceso.
-		#Por ejemplo, la referencia (columna/posArray nº 1) del proceso puede ocupar como máximo 3 huecos (p01 a p99), por lo que en la tabla imprimiremos 3 huecos máximo
-	declare -a anchosTabla=(0 3 3 3 3 3 4 4 4 17 0 0 4 4)
 
 	#Strings de estados/STATUS (Valores a asignar a P_ESTADO)
 	declare -r STAT_MEMO="En Memoria"
@@ -190,10 +202,21 @@ global(){
 
 
 	#DEBUG (Variables globales):
+	# Son variables utilizadas en las funciones debug(), controlan el flujo de dichas funciones
 	declare -r DEFAULT_DEBUG_OUTPUT_FILE_NAME="debug.txt"
 	declare -r DEBUG_ENABLE=true
 	declare    DEBUG_FIRST_EXECUTION=true
 	declare -r DEBUG_PERSISTENT_FILE=false
+
+	# Variable de control de BREAKPOINTS 
+	# utilizados en breakpoints(), perfectos para el desarrollo del programa. 
+	declare -r BREAKPOINT_ENABLED=true
+	declare -r BREAKPOINT_AUTO=false
+	declare -r BREAKPOINT_AUTO_TIMEOUT="0.5"
+
+	#
+	# Llamadas a funcioones de GLOBAL: 
+	#
 
 	creacionDeDirectorios
 	main | tee  "$INFORME_FILENAME" #Por la naturaleza de bash, si llamamos desde una función a otra, las variables de la primera función son accesibles desde la segunda
@@ -202,101 +225,12 @@ global(){
 }
 
 
-# Nombre: imprimirAviso
-# Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras.
-# @param $1: texto de aviso 
-# Cambios 2020: Como hemos añadido la funcion imprimirErrorCritico, he cambiado el color de fondo de ROJO a AMARILLO/NARANJA (Depende del terminal)
-imprimirAviso(){
-	echo -e "\n${B_BLACK}${_YELLOW}\xE2\x9A\xA0  $1 ${NC}\n" #\xE2\x9A\xA0 significa icono de alerta
-}
-
-# Nombre: imprimirErrorCritico
-# Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras.
-# @param $1: texto de aviso
-imprimirErrorCritico(){
-	echo -e "\n${B_BLACK}${_RED}❌  $1 ${NC}\n"
-}
-
-# Nombre: salirPorErroCritico
-# Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras y para la ejecucion.
-# @param $1: texto de aviso
-# Date 21/02/2020
-#//@see  ErrorCritio
-#//@see  forzarCierre
-salirPorErrorCritico(){
-	imprimirErrorCritico "$1"
-	forzarCierre
-}
-# Nombre: medirTiempo
-# Descripción: Permite comparar el tiempo que transcurre entre las dos últimas llamas a esta función.
-#	Si no se ha ejecutado, imprime el tiempo del sistema
-# @Param $1: String a imprmir
-# @Param $2: Fichero en el que sacar el resultado. No pasar nada para no guardar
-# Date: 22/03/2020
-#
-# Variable global que almacena el último instante en ele que se ha llamado a la función (en ms)
-declare -i ultimoInstanteMedido=0
-medirTiempo(){
-
-	local -i tiempoActualMS=$(($(date +%s%N)/1000000))
-
-	echo "$1 : $((tiempoActualMS - ultimoInstanteMedido))ms" | tee -a $2
-	ultimoInstanteMedido=$tiempoActualMS
-
-}
-
-# Nombre: forzarCierre
-# Descripcion: Ejecuta una serie de comandos antes de salir, perfecta para borrar archivo u otras cosas por si no es válida la ejecución!
-# Date: 21/02/2020
-# //@see deleteGeneratedFiles
-forzarCierre(){
-	
-	imprimirErrorCritico "Cerrando por fallo, pulse [Enter] para continuar"
-	read -ers
-	#Funciones a ejecutar aquí abajo: {
-		deleteGeneratedFiles
-
-	#	}
-	clear
-	fin_programa
-}
-
-# Nombre: ComprobaciónDirectorio
-# Date: 07/03/2020
-# Descripción: Comprueba que el script está siendo ejécutandose desde ./algo.sh
-# 	y no desde una dirección distinta (./test/priMayor/algo.sh),
-# 	ya que crearía los archivos de salida en ./____/algo.sh y no en el mismo directorio de ./algo.sh
-#
-comprobacionDirectorio(){
-	local -i nPuntosBarras
-	local -i nDirectorios
-	
-	nDirectorios=$(echo $0 | grep -oF '/' | wc -l)
-	nPuntosBarras=$(echo $0 | grep -oF './' | wc -l)
-	if [[ $nDirectorios -gt $nPuntosBarras ]]; then
-		echo "Directorio de ejecución: $0"
-
-		imprimirLCyan "Si cree que este mensaje no debería salir, por favor, borre ó comente la última línea:"
-		cat $0 | grep -n "comprobacionDirectorio stringDeBúsqueda, no tiene valor alguno" 
-
-		salirPorErrorCritico "Por favor, ejecute el script desde la ruta ./script.sh y no desde otro directorio o carpetas"
-	fi
-}
-
-# Nombre: imprimirLCyan
-# Descripcion: imprime en pantalla el text de color cyan claro
-# @param $1: texto a imprimir en cyan claro
-# @param $2 (opcional): argumento adicional para el echo como -n si no se quiere introducir un salto de linea
-imprimirLCyan(){
-	echo -e $2 ${L_CYAN}$1${NC}
-}
-
-# Nombre: fin_programa
-# Descripcion: se termina la ejecición del script
-fin_programa(){
-	imprimirLCyan "Saliendo del programa..."
-	kill -13 $PIDscript > /dev/null 2>&1
-}
+#  _____       _                 _                  ____      _                             
+# | ____|_ __ | |_ _ __ __ _  __| | __ _   _   _   / ___|__ _| |__   ___  ___ ___ _ __ __ _ 
+# |  _| | '_ \| __| '__/ _` |/ _` |/ _` | | | | | | |   / _` | '_ \ / _ \/ __/ _ \ '__/ _` |
+# | |___| | | | |_| | | (_| | (_| | (_| | | |_| | | |__| (_| | |_) |  __/ (_|  __/ | | (_| |
+# |_____|_| |_|\__|_|  \__,_|\__,_|\__,_|  \__, |  \____\__,_|_.__/ \___|\___\___|_|  \__,_|
+#                                          |___/                                          
 
 # Nombre: scanfSiNo
 # Descripcion: asigna un valor valido a una variable desde el teclado
@@ -455,6 +389,7 @@ comprobarSN(){
 	fi
 } 
 
+
 # Nombre: imprimirCabecera
 # Descripción: Imprime la cabecera del programa
 # Date: 7/03/2020
@@ -487,52 +422,6 @@ imprimirCabecera(){
 	echo -e "\e[0;36m		╚═══════════════════════════════════════════════════════════════════════════════╝\e[0m\n"
 
 }
-
-# Nombre cargaDatos
-# Descripcion: muestra las opciones de inicio del programa si los datos es por fichero, teclado o automáticos
-cargaDatos(){
-	local -i opcionUsuario
-	local masProc="s"
-	local -i i
-	echo -e " ${L_YELLOW}╔════════════════════════════════════╗
- ║${NC}${B_BLUE}¿Como quieres introducir los datos? ${NC}${L_YELLOW}║
- ║                                    ║
- ║${NC} 1-Por teclado                      ${L_YELLOW}║
- ║${NC} 2-Por fichero                      ${L_YELLOW}║
- ║${NC} 3-Datos automáticos                ${L_YELLOW}║
- ║${NC} 4-Salir del programa               ${L_YELLOW}║
- ║                                    ║
- ╚════════════════════════════════════╝${NC}\n"
-	scanfNumMinMax "Elige opción: " opcionUsuario 1 4
-    case $opcionUsuario in
-	1)
-		menuAlgoritmo
-		clear
-		imprimirLCyan "Has elegido Apropiativo: $opcionApropiativo"
-		#imprimirLCyan "Has elegido Apropiativo: $opcionApropiativo y Estatico: $opcionEstatico"
-		scanfNum "¿Tamaño de la memoria?: " tamMemoria 1
-		scanfNumMinMax "¿Prioridad mínima?" priorMin -10000 10000 
-		scanfNumMinMax "¿Prioridad máxima?" priorMax -10000 10000
-		establecerPrioridad 
-		while [ $masProc = "s" ]; do
-			((numProc++))
-			datosManualProcesos $numProc
-			scanfSiNo "¿Quieres meter mas procesos? [s/n]:" masProc
-		done
-	;;
-	2)
-		datosFichero
-	;;
-    3)
-		menuAlgoritmo
-		datosAleatorios
-	;;
-	4)
-		fin_programa
-	;;
-	esac
-}
-
 # Nombre: menuAlgoritmo
 # Descripcion: menu para elegir las opciones del algoritmo, más info en la opcion 5 Ayuda (glosario)
 menuAlgoritmo(){
@@ -584,83 +473,50 @@ menuAlgoritmo(){
 
 }
 
-# Nombre: breakpoint
-# Date: 21/02/2020
-# Descripción: Permite realizar una parada del programa en cualquier punto del código hasta que no se realizar una entrada por teclado.
-# Uso: Activar o desactivar la variable global $BREAKPOINT_ENABLED para activar o desactivar los breakpoints.
-# Globales: BREAKPOINT_ENABLED
-# @param $@: Imprime todos los stings pasados como argumento, por si se quieren visualizar variables. 
-breakpoint(){
-	
-	if [[ $BREAKPOINT_ENABLED == true ]]; then
-		
-
-		if (($# == 0));then 
-			echo -n ">"
-		else
-			echo -n "Breakpoint > $1"
-		fi
-		if [[ $BREAKPOINT_AUTO == "true" ]];then
-			sleep $BREAKPOINT_AUTO_TIMEOUT
-		else
-			read -ers
-		fi
-	fi
+# Nombre cargaDatos
+# Descripcion: muestra las opciones de inicio del programa si los datos es por fichero, teclado o automáticos
+cargaDatos(){
+	local -i opcionUsuario
+	local masProc="s"
+	local -i i
+	echo -e " ${L_YELLOW}╔════════════════════════════════════╗
+ ║${NC}${B_BLUE}¿Como quieres introducir los datos? ${NC}${L_YELLOW}║
+ ║                                    ║
+ ║${NC} 1-Por teclado                      ${L_YELLOW}║
+ ║${NC} 2-Por fichero                      ${L_YELLOW}║
+ ║${NC} 3-Datos automáticos                ${L_YELLOW}║
+ ║${NC} 4-Salir del programa               ${L_YELLOW}║
+ ║                                    ║
+ ╚════════════════════════════════════╝${NC}\n"
+	scanfNumMinMax "Elige opción: " opcionUsuario 1 4
+    case $opcionUsuario in
+	1)
+		menuAlgoritmo
+		clear
+		imprimirLCyan "Has elegido Apropiativo: $opcionApropiativo"
+		#imprimirLCyan "Has elegido Apropiativo: $opcionApropiativo y Estatico: $opcionEstatico"
+		scanfNum "¿Tamaño de la memoria?: " tamMemoria 1
+		scanfNumMinMax "¿Prioridad mínima?" priorMin -10000 10000 
+		scanfNumMinMax "¿Prioridad máxima?" priorMax -10000 10000
+		establecerPrioridad 
+		while [ $masProc = "s" ]; do
+			((numProc++))
+			datosManualProcesos $numProc
+			scanfSiNo "¿Quieres meter mas procesos? [s/n]:" masProc
+		done
+	;;
+	2)
+		datosFichero
+	;;
+    3)
+		menuAlgoritmo
+		datosAleatorios
+	;;
+	4)
+		fin_programa
+	;;
+	esac
 }
-
-# Nombre: debug (y sus muchas funciones)
-# Date: 21/02/2020
-# Descripción: Permite imprimir un string en un fichero a parte, y que este sea visualizado desde otro terminal
-# Uso: alternar los booleanos globales
-# Globales:DEFAULT_DEBUG_OUTPUT_FILE_NAME, DEBUG_ENABLE, DEBUG_FIRST_EXECUTION, DEBUG_PERSISTENT_FILE
-# @param $1: String a imprimir
-debug(){
-  
-  if [[ $DEBUG_ENABLE == false ]]; then
-    return 0
-  fi
-
-  mensajeEntadaDebug(){
-    printf "Introduzca el comando \$tail -f $DEFAULT_DEBUG_OUTPUT_FILE_NAME para obtener el debug\n"
-   
-  }
-  cleanDebugFile(){
-    if [[ $DEBUG_PERSISTENT_FILE == false ]]; then
-     echo "" > $DEFAULT_DEBUG_OUTPUT_FILE_NAME
-    fi
-  }
-
-  cabeceraDebug(){
-    printf "%s\n-----------------------------------------------\n" "$(date '+%d/%m/%Y %H:%M:%S')" >> $DEFAULT_DEBUG_OUTPUT_FILE_NAME
-
-  }
-
-
-  if [[ $DEBUG_FIRST_EXECUTION == true ]]; then
-    cleanDebugFile
-    mensajeEntadaDebug
-    cabeceraDebug
-    DEBUG_FIRST_EXECUTION=false
-  fi
-  echo -e "$1" >> $DEFAULT_DEBUG_OUTPUT_FILE_NAME
-  
-}
-
-# Nombre: deleteGeneratedFiles
-# Date: 21/02/2020
-# Descripción: Borra aquellos archivos que han sido generados por el programa. Es necesario indicar los archivos a borrar
-# Uso: Añadir los archvios, pereferiblemente, comprobar antes de borrar si existen
-deleteGeneratedFiles(){
-	if [[ -f $DEFAULT_DEBUG_OUTPUT_FILE_NAME ]]; then
-		rm $DEFAULT_DEBUG_OUTPUT_FILE_NAME >> /dev/null
-	fi
-
-	if [[ -f $DEFAULT_LOG_FILE_NAME ]]; then
-		rm $DEFAULT_LOG_FILE_NAME >> /dev/null
-	fi
-	#TOFILL
-}
-
 
 # Nombre: establecerPrioridad
 # Descripcion: establece el tipo de prioridad considerando priorMin y priorMax. El valor se usara para comparar en la ejecución
@@ -866,7 +722,7 @@ escribeDatos(){
 	# Nombre: ordenarProcesosNombre
 	# Descripción: Reordena toda la tabla de procesos por nombre.
 	# Detalles: función escribeDatos(), en el curso 19/20 se exige que el fichero
-	#	tenga los datos ordenados por nombre de proceso, para que sea más simple añadir nuevos datos
+	#	tenga los datos ordenados por nombre de proceso/añadido, para que sea más simple añadir nuevos datos
 	#	como no es necesario almacenar el nombre, igual también se podría haber eliminado, pero bueno (es un cambio necesario, y paso de hacer lo otro)
 	# Date: 17/03/2020
 	ordenarProcesosNombre(){
@@ -882,7 +738,7 @@ escribeDatos(){
 				fi
 			done
 			#intercambio de elementos
-			for((k=1;k<=6;k++)) do
+			for((k=1;k<=13;k++)) do
 				aux=${procesos[$i,$k]}
 				procesos[$i,$k]=${procesos[$minLlegada,$k]}	
 				procesos[$minLlegada,$k]=$aux
@@ -925,6 +781,589 @@ creacionDeDirectorios(){
 }
 
 
+
+#  __  __ _              _                        
+# |  \/  (_)___  ___ ___| | __ _ _ __   ___  __ _ 
+# | |\/| | / __|/ __/ _ \ |/ _` | '_ \ / _ \/ _` |
+# | |  | | \__ \ (_|  __/ | (_| | | | |  __/ (_| |
+# |_|  |_|_|___/\___\___|_|\__,_|_| |_|\___|\__,_|
+#
+# Nombre: DEV_medirTiempos
+# Descripción: Permite comparar el tiempo que transcurre entre las dos últimas llamas a esta función.
+#	Si no se ha ejecutado, imprime el tiempo del sistema
+# @Param $1: String a imprmir
+# @Param $2: Fichero en el que sacar el resultado. No pasar nada para no guardar
+# Date: 22/03/2020
+#
+# Variable global que almacena el último instante en ele que se ha llamado a la función (en ms)
+declare -i ultimoInstanteMedido=0
+DEV_medirTiempos(){
+
+	local -i tiempoActualMS=$(($(date +%s%N)/1000000))
+
+	echo "$1 : $((tiempoActualMS - ultimoInstanteMedido))ms" | tee -a $2
+	ultimoInstanteMedido=$tiempoActualMS
+}
+# Nombre: ComprobaciónDirectorio
+# Date: 07/03/2020
+# Descripción: Comprueba que el script está siendo ejécutandose desde ./algo.sh
+# 	y no desde una dirección distinta (./test/priMayor/algo.sh),
+# 	ya que crearía los archivos de salida en ./____/algo.sh y no en el mismo directorio de ./algo.sh
+#
+comprobacionDirectorio(){
+	local -i nPuntosBarras
+	local -i nDirectorios
+	
+	nDirectorios=$(echo $0 | grep -oF '/' | wc -l)
+	nPuntosBarras=$(echo $0 | grep -oF './' | wc -l)
+	if [[ $nDirectorios -gt $nPuntosBarras ]]; then
+		echo "Directorio de ejecución: $0"
+
+		imprimirLCyan "Si cree que este mensaje no debería salir, por favor, borre ó comente la última línea:"
+		cat $0 | grep -n "comprobacionDirectorio stringDeBúsqueda, no tiene valor alguno" 
+
+		salirPorErrorCritico "Por favor, ejecute el script desde la ruta ./script.sh y no desde otro directorio o carpetas"
+	fi
+}
+
+# Nombre: convertirFicheroColorEnBlancoNegro 	
+# Descripción: Lee un fichero formateado con ASCII Color Schemes y lo convierte en Blanco y negro
+# 		Elimina los colores usados en este script y otros chars de escape para poder ser visualizados en cualquier editor de texto
+# Date: 29/02/2020
+# Documentation: https://stackoverflow.com/questions/19296667/remove-ansi-color-codes-from-a-text-file-using-bash
+# @Param $1: Direccion del fichero 1 a convertir
+# @Param $2: Dirección del fichero 2 en el que se volcará el resultado
+# @Param $3: String boolano ("true"), en el que se indica si se quiere borrar el fichero original
+convertirFicheroColorEnBlancoNegro(){
+	
+	sed -r "s/\x1B\[(([0-9]{1,2})?(;)?([0-9]{1,2})?)?[m,K,H,f,J]//g" "$1" > "$2"
+
+	if [[ $3 = "true" ]];then
+		
+		rm "$1" && echo "El fichero $1 ha sido borrado"
+	fi
+}
+
+# Nombre: abrirInforme
+# Descripción: Función con distintas opciones para abrir el informe
+# Date: 20/03/2020
+abrirInforme(){
+	local opcion
+	imprimirLCyan "Qué desea visualizar?"
+	echo "  1) Informe a color completo (con \$cat)"
+	echo "  2) Informe a color con scroll (con \$less, estilo Editor VI)"
+	echo "  3) Informe a color secuencial (con \$more)"
+	echo "  4) Informe en blanco y negro completo(con \$cat)"
+	echo "  5) Informe en blanco y negro con scroll (con \$less, estilo Editor VI)"
+	echo "  6) Informe en blanco y negro secuencial (con \$more)"
+	echo "  7) Editar Informe blanco y negro con VIM"
+	echo "  8) Editar Informe blanco y negro con NANO"
+	echo "  *) Salir"
+
+	read -r opcion
+
+	case $opcion in
+	1)
+		cat "$INFORME_FILENAME"
+	;;
+	2)
+		less -R "$INFORME_FILENAME"
+	;;
+	3)
+		more "$INFORME_FILENAME"
+	;;
+	4)
+		cat "$INFORMEBN_FILENAME"
+	;;
+	5)
+		less "$INFORMEBN_FILENAME"
+	;;
+	6)
+		more "$INFORME_FILENAME"
+	;;
+	7)
+		vim "$INFORMEBN_FILENAME"
+	;;
+	8)
+		nano "$INFORMEBN_FILENAME"
+	;;
+	*)
+		echo -n ""
+	;;
+	esac
+
+	
+}
+
+# Nombre: renombrarDatosEntrada
+# Descripción: Renombra el archivo datos.txt para que los datos no sean borrados en la proxima ejecución
+# Date: 19/03/2020
+renombrarDatosEntrada(){
+	local opcion
+	local nombreArchivo
+	local -i haFallado=0
+	scanfSiNo "¿Desea guardar los datos de entrada con otro nombre? [s/n]:" "opcion"
+
+	if [[ $opcion = s ]]; then
+		echo  "Introduzca el nuevo nombre"
+		echo  "Recordatorio: Es necesario añadir el formato (.txt) y evitar usar Slashes [ / ], ya que son tomadas como un directorio"
+		read -r "nombreArchivo"
+
+		cat "${DATA_DIRECTORY}datos.txt" > "${DATA_DIRECTORY}$nombreArchivo" || haFallado=1 #Se podría hacer con un cp o un move, pero con esto nos ahorramos problemas
+
+		
+		if [[ $haFallado -eq 1 ]];then
+			renombrarDatosEntrada
+		fi
+	fi
+}
+
+#   ____            _             _       _        _____ _        _       
+#  / ___|___  _ __ | |_ _ __ ___ | |   __| | ___  |  ___| |_   _ (_) ___  
+# | |   / _ \| '_ \| __| '__/ _ \| |  / _` |/ _ \ | |_  | | | | || |/ _ \ 
+# | |__| (_) | | | | |_| | | (_) | | | (_| |  __/ |  _| | | |_| || | (_) |
+#  \____\___/|_| |_|\__|_|  \___/|_|  \__,_|\___| |_|   |_|\__,_|/ |\___/ 
+#                                                              |__/       
+#
+
+# Nombre: salirPorErroCritico
+# Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras y para la ejecucion.
+# @param $1: texto de aviso
+# Date 21/02/2020
+salirPorErrorCritico(){
+	imprimirErrorCritico "$1"
+	forzarCierre
+}
+# Nombre: fin_programa
+# Descripcion: se termina la ejecición del script
+fin_programa(){
+	imprimirLCyan "Saliendo del programa..."
+	kill -13 $PIDscript > /dev/null 2>&1
+}
+# Nombre: forzarCierre
+# Descripcion: Ejecuta una serie de comandos antes de salir, perfecta para borrar archivo u otras cosas por si no es válida la ejecución!
+# Date: 21/02/2020
+# //@see deleteGeneratedFiles
+forzarCierre(){
+	
+	imprimirErrorCritico "Cerrando por fallo, pulse [Enter] para continuar"
+	read -ers
+	#Funciones a ejecutar aquí abajo: {
+		deleteGeneratedFiles
+
+	#	}
+	clear
+	fin_programa
+}
+
+# Nombre: breakpoint
+# Date: 21/02/2020
+# Descripción: Permite realizar una parada del programa en cualquier punto del código hasta que no se realizar una entrada por teclado.
+# Uso: Activar o desactivar la variable global $BREAKPOINT_ENABLED para activar o desactivar los breakpoints.
+# Nota: En algunos puntos del programa, si ocurre un fallo específico, se lanza un breakpoint, fueron usados durante el desarrollo.
+# Globales: BREAKPOINT_ENABLED
+# @param $@: Imprime todos los stings pasados como argumento, por si se quieren visualizar variables. 
+breakpoint(){
+	
+	if [[ $BREAKPOINT_ENABLED == true ]]; then
+		
+
+		if (($# == 0));then 
+			echo -n ">"
+		else
+			echo -n "Breakpoint > $1"
+		fi
+		if [[ $BREAKPOINT_AUTO == "true" ]];then
+			sleep $BREAKPOINT_AUTO_TIMEOUT
+		else
+			read -ers
+		fi
+	fi
+}
+
+# Nombre: debug (y sus muchas funciones)
+# Date: 21/02/2020
+# Descripción: Permite imprimir un string en un fichero a parte, y que este sea visualizado desde otro terminal
+# Uso: alternar los booleanos globales
+# Globales:DEFAULT_DEBUG_OUTPUT_FILE_NAME, DEBUG_ENABLE, DEBUG_FIRST_EXECUTION, DEBUG_PERSISTENT_FILE
+# @param $1: String a imprimir
+debug(){
+  
+  if [[ $DEBUG_ENABLE == false ]]; then
+    return 0
+  fi
+
+  mensajeEntadaDebug(){
+    printf "Introduzca el comando \$tail -f $DEFAULT_DEBUG_OUTPUT_FILE_NAME para obtener el debug\n"
+   
+  }
+  cleanDebugFile(){
+    if [[ $DEBUG_PERSISTENT_FILE == false ]]; then
+     echo "" > $DEFAULT_DEBUG_OUTPUT_FILE_NAME
+    fi
+  }
+
+  cabeceraDebug(){
+    printf "%s\n-----------------------------------------------\n" "$(date '+%d/%m/%Y %H:%M:%S')" >> $DEFAULT_DEBUG_OUTPUT_FILE_NAME
+
+  }
+
+
+  if [[ $DEBUG_FIRST_EXECUTION == true ]]; then
+    cleanDebugFile
+    mensajeEntadaDebug
+    cabeceraDebug
+    DEBUG_FIRST_EXECUTION=false
+  fi
+  echo -e "$1" >> $DEFAULT_DEBUG_OUTPUT_FILE_NAME
+  
+}
+
+# Nombre: deleteGeneratedFiles
+# Date: 21/02/2020
+# Descripción: Borra aquellos archivos que han sido generados por el programa. Es necesario indicar los archivos a borrar
+# Uso: Añadir los archvios, pereferiblemente, comprobar antes de borrar si existen
+deleteGeneratedFiles(){
+	if [[ -f $DEFAULT_DEBUG_OUTPUT_FILE_NAME ]]; then
+		rm $DEFAULT_DEBUG_OUTPUT_FILE_NAME >> /dev/null
+	fi
+
+	if [[ -f $DEFAULT_LOG_FILE_NAME ]]; then
+		rm $DEFAULT_LOG_FILE_NAME >> /dev/null
+	fi
+	#TOFILL
+}
+
+#  ____        _ _     _                                ____             _        _ _       
+# / ___|  __ _| (_) __| | __ _ ___   _ __   ___  _ __  |  _ \ __ _ _ __ | |_ __ _| | | __ _ 
+# \___ \ / _` | | |/ _` |/ _` / __| | '_ \ / _ \| '__| | |_) / _` | '_ \| __/ _` | | |/ _` |
+#  ___) | (_| | | | (_| | (_| \__ \ | |_) | (_) | |    |  __/ (_| | | | | || (_| | | | (_| |
+# |____/ \__,_|_|_|\__,_|\__,_|___/ | .__/ \___/|_|    |_|   \__,_|_| |_|\__\__,_|_|_|\__,_|
+#                                   |_|                                                     
+
+# Nombre: imprimirAviso
+# Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras.
+# @param $1: texto de aviso 
+# Cambios 2020: Como hemos añadido la funcion imprimirErrorCritico, he cambiado el color de fondo de ROJO a AMARILLO/NARANJA (Depende del terminal)
+imprimirAviso(){
+	echo -e "\n${B_BLACK}${_YELLOW}\xE2\x9A\xA0  $1 ${NC}\n" #\xE2\x9A\xA0 significa icono de alerta
+}
+
+# Nombre: imprimirErrorCritico
+# Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras.
+# @param $1: texto de aviso
+imprimirErrorCritico(){
+	echo -e "\n${B_BLACK}${_RED}❌  $1 ${NC}\n"
+}
+
+# Nombre: imprimirLCyan
+# Descripcion: imprime en pantalla el text de color cyan claro
+# @param $1: texto a imprimir en cyan claro
+# @param $2 (opcional): argumento adicional para el echo como -n si no se quiere introducir un salto de linea
+imprimirLCyan(){
+	echo -e $2 ${L_CYAN}$1${NC}
+}
+
+# Nombre: imprimirTiemposMedios
+# Descripción: Imprime los tiempos medios del sistema.
+# 
+imprimirTiemposMedios(){
+	#Tiempos Acumulados
+	#local tEjecAcumulado=0
+	local tEsperaAcumulado=0
+	local tRetornoAcumulado=0
+
+	#local nProcesosEjecucion=0
+	local nProcesosEspera=0
+	local nProcesosRetorno=0
+	#Tiempos medios
+	local tEjecMedio
+	local tEsperaMedio
+	local tRetornoMedio
+
+	
+	if  [[ $memoriaLibre -eq $tamMemoria ]] && [[ $procEjecutados -eq 0 ]]; then
+	echo No hay tiempos medios al no haber procesos en el sistema.
+		return
+	fi
+
+	calcularTiemposMedios(){
+
+		#Acumulador
+		for ((i=1; i<=numProc; i++));do
+			#Tiempo Ejecución Acumulado
+			#if [[ $(esEntero "${procesos[$i,3]}") = "true" ]]; then
+			#	tEjecAcumulado=$(( tEjecAcumulado + ${procesos[$i,3]}))
+			#	((nProcesosEjecucion++))
+			#fi
+			
+			#Tiempo Espera Acumulado
+			if [[ $(esEntero "${procesos[$i,8]}") = "true" ]]; then
+				tEsperaAcumulado=$(( tEsperaAcumulado + ${procesos[$i,$P_TESPERA]}))
+				((nProcesosEspera++))
+			fi
+
+			#Tiempo Retorno Acumulado
+			if [[ $(esEntero "${procesos[$i,8]}") = "true" ]]; then
+				tRetornoAcumulado=$(( tRetornoAcumulado + ${procesos[$i,8]}))
+				((nProcesosRetorno++))
+			fi
+
+		done
+
+		#obsoleto
+		#tEjecMedio=$(echo "scale=2;$tEjecAcumulado/$nProcesosEjecucion" | bc -l)
+		tEsperaMedio=$(echo "scale=2;$tEsperaAcumulado/$nProcesosEspera" | bc -l)
+		tRetornoMedio=$(echo "scale=2;$tRetornoAcumulado/$nProcesosRetorno" | bc -l)
+
+		#Ejecución medio como la suma de espera + retorno
+		tEjecMedio=$(echo "scale=2;$tEsperaMedio+$tRetornoMedio" | bc -l)
+	}
+
+	calcularTiemposMedios # > /dev/null 2>&1
+	
+
+	imprimirLCyan "Tiempo de espera medio: $BOLD$tEsperaMedio || " "-n"
+	imprimirLCyan    "Tiempo de retorno medio: $BOLD$tRetornoMedio"
+	#imprimirLCyan "Tiempo de ejecución medio: $BOLD$tEjecMedio"
+	
+}
+
+# Nombre: truncarMemoria
+# Date: 08/03/2020
+# Parámetros: Utiliza la variable memoriaTruncada declarada en dibujarMemoria
+# Descripción: rellena un array bidimensional con el string de memoria a imprimir.
+#		este nuevo string permite representar la memoria de forma dínamica, dependiendo del ancho del terminal.
+truncarMemoria(){
+	local -i ultimaPosMemEmplazada=1
+	local    ultimoIndiceEncontrado=-1
+	local -i i
+	local -i j
+	
+	#Últimas i,j -> Almacena la última posición en la que se dibuja memoria, para añadir al final de la barra el número con la memoria total
+	local -i ultimaI
+	local -i ultimaJ
+	for (( i=1; i<= (altoMemoriaTruncada*3); i+=3 )); do
+		for ((j=1; j <= anchoTerminalBloques; j++)); do	#La línea de memoria empieza en 1
+			memoriaTruncada[$i,$j]=${memoriaSegunNecesidades[$ultimaPosMemEmplazada,$MEM_TOSTRING]}
+			
+			if [[ ${memoriaSegunNecesidades[$ultimaPosMemEmplazada,$MEM_INDICE]} -ne $ultimoIndiceEncontrado ]];then
+				ultimoIndiceEncontrado=${memoriaSegunNecesidades[$ultimaPosMemEmplazada,$MEM_INDICE]}
+				
+				#Fila de los nombres
+				if [[ $ultimoIndiceEncontrado -eq $MEM_HUECO_VACIO ]]; then #Si el hueco está vacío
+					memoriaTruncada[$((i-1)),$j]="---"
+				else	#Nombre del proceso
+					memoriaTruncada[$((i-1)),$j]=${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
+				fi
+
+				#Fila de las posiciones
+				if [[ $ultimaPosMemEmplazada -lt 10 ]]; then
+					memoriaTruncada[$((i+1)),$j]="$((ultimaPosMemEmplazada-1))  "	#Metemos espacios al final para que no se descuadre, si el tamaño es >=100, se descuadra
+				else															#Sería poner un elif con el tamaño del int, pero me da pereza, pd: he tardado más escribiendo esto
+					memoriaTruncada[$((i+1)),$j]="$((ultimaPosMemEmplazada-1)) "		#que haciendolo, un saludo: Jorge (09/03/2020 - 13:17)
+				fi
+			else
+				memoriaTruncada[$((i-1)),$j]="   "		 #No hay proceso -> Vacío
+				memoriaTruncada[$((i+1)),$j]="   "		 #No hay dirección al no haber cambio de proceso -> Vacío
+			fi
+			((ultimaPosMemEmplazada++))
+			ultimaI=$i
+			ultimaJ=$j
+			if [[ $ultimaPosMemEmplazada -gt $tamMemoria ]];then break; fi
+
+		done
+			ultimoIndiceEncontrado=-1 #reseteo para que se imprima siempre en cada línea la dirección y el proceso
+	done
+
+	#Añade los elementos al margen izquierdo
+	for (( i=1; i<= (altoMemoriaTruncada*3); i+=3 )); do
+		memoriaTruncada[$((i-1)),0]="   "
+		memoriaTruncada[$((i  )),0]="   "
+		memoriaTruncada[$((i+1)),0]="   "
+	done
+
+	#Añade el título de la barra
+	memoriaTruncada[1,0]="${NC}BM|"
+	#Añade el fin de la barra (tamaño de memoria final)
+	memoriaTruncada[$ultimaI,$ultimaJ]="${memoriaTruncada[$ultimaI,$ultimaJ]}|$tamMemoria"
+
+}
+
+# Nombre: dibujarMemoria
+# Descripción: Muestra por pantalla la memoria truncada
+# @Param: $1 string de control: si el string es "mostrarStatsMemoria", se muestra por pantalla el uso de memoria y el 
+dibujarMemoria(){
+	local -i memoriaEnUso
+	local memoriaEnUsoPorciento #Es un string al ser float
+	declare -A memoriaTruncada
+	declare -i anchoTerminal=$(tput cols) #En columnas
+	declare -i anchoTerminalBloques=$(( anchoTerminal/3 - 2)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color || restamos unidades para dejar margen para maniobrar
+	declare -i altoMemoriaTruncada
+	
+	#Calculamos el alto de memoria (el número de filas que ocupará truncada)
+	if [[ $((tamMemoria%anchoTerminalBloques)) == 0 ]];then
+		altoMemoriaTruncada=$((tamMemoria/anchoTerminalBloques))
+	else	#Si la memoria ocupa parte de una líena, la asignamos entera
+		altoMemoriaTruncada=$(( ( tamMemoria/anchoTerminalBloques ) + 1 ))
+	fi
+
+	#Stats mememoria:
+	if [[ $1 = "mostrarStatsMemoria" ]]; then
+		memoriaEnUso=$((tamMemoria-memoriaLibre))
+		memoriaEnUsoPorciento=$(echo "scale=2;100*$memoriaEnUso/$tamMemoria" | bc -l) 
+		imprimirLCyan "Uso de memoria: $memoriaEnUso/$tamMemoria ($memoriaEnUsoPorciento%) -> Memoria libre: $memoriaLibre"
+	fi
+
+	#for((i=1;i<=tamMemoria;i++)); do #Imprime los índices de memoria para mejorar el flujo
+	#	break
+	#	echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
+	#done
+	#echo "" #salto de línea
+
+	truncarMemoria 	#Imprimimos la memoria truncada
+	for (( i=0; i< 3*altoMemoriaTruncada; i++ ));do
+		
+		for (( j=0; j<=anchoTerminalBloques; j++));do
+			echo -en "${memoriaTruncada[$i,$j]}"
+		done
+		echo ""
+	done
+}
+# Nombre: truncarBarraCPU
+# Date: 09/03/2020
+# Descripción: Trunca la barra de CPU, y añade el tiempo de inicio y fin de cada proceso, así como el nombre correspondiente.
+# Nota: Tiene un uso similar al truncado de memoria. Los cálculos de las distintas variables aquí referenciadas han sido realizados en dibujarEstadoCPU()
+#			ya que es necesario saber de antemano el ancho y alto del array a imprimir y a generar, y puede variar si se calcula 2 veces, una en cada función.
+#			Además, aquí no tenemos un vector.length para saber cuanto mide un array, bash-ura de lenguaje. 
+#		Podría hacerse en una misma función, pero los parámetros en Bash son un dolor, y paso de perder el tiempo haciendo un código de muy alta calidad.
+#			
+truncarBarraCPU(){
+	declare -a barraTiempoColor #Array que contiene los string a imprimir, generado en: colorearBarraMemoria. En este caso hemos trabajado con 2 arrays y no con uno, porque soy bobo.
+									#PD: no es lo más eficiente, ya que se colorea cada vez, quizá debería hacerlo en el momento, como con la memoria? Dunno m8
+	local -i i
+	local -i j
+	local -i ultimaPosMemEmplazada=0
+	local    ultimoIndiceEncontrado=-1
+
+	#Últimas i,j -> Almacena la última posición en la que se dibuja memoria, para añadir al final de la barra el número con la memoria total
+	local -i ultimaI
+	local -i ultimaJ
+	colorearBarraCPU
+
+	for (( i=1; i<= (altoLineaTiempoTruncada*3); i+=3 )); do
+		for ((j=1; j <= anchoTerminalBloques; j++)); do	#La barra de CPU empieza en 0
+
+			#Volcamos la fila intermedia (barras de color)
+			lineaTiempoTruncada[$i,$j]=${barraTiempoColor[$ultimaPosMemEmplazada]}
+
+			#Si no coincide con la última posición: Significa que hay otro proceso -> añadimos ref y tiempo en las líneas.
+			if [[ ${lineaEstadoCPU[$ultimaPosMemEmplazada]} -ne $ultimoIndiceEncontrado ]];then
+				ultimoIndiceEncontrado=${lineaEstadoCPU[$ultimaPosMemEmplazada]}
+				
+				#Fila de los nombres
+				if [[ $ultimoIndiceEncontrado -eq 0 ]]; then #Si el hueco está vacío (al no haber proceso, CPU vacía en ese instante)
+					lineaTiempoTruncada[$((i-1)),$j]="${NC}---"
+				else
+					lineaTiempoTruncada[$((i-1)),$j]=${NC}${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
+				fi
+
+				#Fila de las posiciones
+				if [[ $ultimaPosMemEmplazada -lt 10 ]]; then
+					lineaTiempoTruncada[$((i+1)),$j]="$ultimaPosMemEmplazada  "	#Metemos espacios al final para que no se descuadre, si el tamaño es >=100, se descuadra
+				else															#Sería poner un elif con el tamaño del int, pero me da pereza, pd: he tardado más escribiendo esto
+					lineaTiempoTruncada[$((i+1)),$j]="$ultimaPosMemEmplazada "		#que haciendolo, un saludo: Jorge (09/03/2020 - 13:17)
+				fi
+			else
+				lineaTiempoTruncada[$((i-1)),$j]="   "		 #No hay cambio de proceso-> Vacío
+				lineaTiempoTruncada[$((i+1)),$j]="   "		 #No hay dirección al no haber cambio de proceso -> Vacío
+			fi
+
+			((ultimaPosMemEmplazada++))
+			ultimaI=$i
+			ultimaJ=$j
+			if [[ $ultimaPosMemEmplazada -gt $tiempoEjecucion ]];then break; fi	#Se ha emplazado toda la memoria
+		done
+			ultimoIndiceEncontrado=-1 #reseteo para que se imprima siempre en cada línea la dirección y el proceso
+	done
+	
+	#Añade los elementos al margen izquierdo
+	for (( i=1; i<= (altoLineaTiempoTruncada*3); i+=3 )); do
+		lineaTiempoTruncada[$((i-1)),0]="   "
+		lineaTiempoTruncada[$((i  )),0]="   "
+		lineaTiempoTruncada[$((i+1)),0]="   "
+	done
+	lineaTiempoTruncada[$((1  )),0]="${NC}BT|"
+
+	#Fin barra (pone el proceso actual en CPU pero no dibuja la barra)
+
+	if [[ $procesoCPU -ne 0 ]]; then
+		lineaTiempoTruncada[$((ultimaI-1)),$ultimaJ]="${NC}${procesos[$procesoCPU,$P_NOMBRE]}"
+		lineaTiempoTruncada[$ultimaI,$ultimaJ]="${NC}${lineaTiempoTruncada[$ultimaI,$ultimaJ]}|"
+		lineaTiempoTruncada[$((ultimaI+1)),$ultimaJ]="${NC}$tiempoEjecucion"
+	fi
+}
+
+colorearBarraCPU(){
+	local colorProceso
+	local colorLetraProceso
+
+	for ((i=0; i< tiempoEjecucion; i++)); do
+		if [[ ${lineaEstadoCPU[$i]} -ne 0 ]]; then
+			colorProceso=${procesos[${lineaEstadoCPU[$i]},$P_COLOR]}
+			colorLetraProceso=${procesos[${lineaEstadoCPU[$i]},$P_COLORLETRA]}
+		else
+			colorProceso=$_WHITE
+			colorLetraProceso=$WHITE
+		fi
+		barraTiempoColor+=("${colorProceso}${colorLetraProceso}[=]${NC}") #3 espacios porque es el ancho del proceso que desea el profesor
+	done
+	
+}
+# Nombre: dibujarEstadoCPU
+# Date: 09/03/2020
+# Descripción: Imprime el estado de la CPU por pantalla 
+dibujarEstadoCPU(){
+	local -i
+	declare -i anchoTerminal=$(tput cols) #En columnas
+	declare -i anchoTerminalBloques=$((anchoTerminal/3 - 2)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color || restamos 1 unidad para dejar margen para maniobrar
+	declare -A lineaTiempoTruncada
+	declare -i altoLineaTiempoTruncada
+	
+	#Calculamos el alto de memoria (el número de filas que ocupará truncada)
+	if [[ $((tiempoEjecucion%anchoTerminalBloques)) == 0 ]];then
+		if [[ tiempoEjecucion -eq 0 ]]; then #Con tiempo 0 la CPU está vacía, pero queremos mostrarla, por lo que hay que forzar el valor a 1
+			altoLineaTiempoTruncada=1
+		else
+			altoLineaTiempoTruncada=$((tiempoEjecucion/anchoTerminalBloques))
+		fi
+	else	#Si la memoria ocupa parte de una líena, la asignamos entera
+		altoLineaTiempoTruncada=$(( ( tiempoEjecucion/anchoTerminalBloques ) + 1 ))
+	fi
+
+	truncarBarraCPU
+
+	for (( i= 0; i<= 3*altoLineaTiempoTruncada; i++ ));do
+		for (( j=0; j<=anchoTerminalBloques ; j++));do
+			echo -en "${lineaTiempoTruncada[$i,$j]}"
+		done
+		echo ""
+	done
+}
+
+# Nombre: imprimirTiemposMedios
+# Descripción: Imprime el tiempo medio de Ejecución, Espera y Retorno con decimales
+# Date: 23/09/2020
+# @Param $1: Si es "mostrarEjecución" muestra el tiempo medio de ejecución
+
+
+#	 _____     _     _       
+#	|_   _|_ _| |__ | | __ _ 
+#	  | |/ _` | '_ \| |/ _` |
+#	  | | (_| | |_) | | (_| |
+#	  |_|\__,_|_.__/|_|\__,_|
+#	                         
+
 # Nombre: ordenarProcesos
 # Descripcion: ordena el array procesos en función del tiempo de llegada.
 # Se usa selection sort como algortimo de ordenamiento
@@ -950,7 +1389,7 @@ ordenarProcesos(){
 			fi
 		done
 		#intercambio de elementos
-		for((k=1;k<=11;k++)) do
+		for((k=1;k<=13;k++)) do
 			aux=${procesos[$i,$k]}
 			procesos[$i,$k]=${procesos[$minLlegada,$k]}	
 			procesos[$minLlegada,$k]=$aux
@@ -967,11 +1406,11 @@ ordenarProcesos(){
 #	con todos los parámtros, puede ser muy pesado.
 #	He decidido hacer esto por dos razones: 1º: Puedo reutilizar la tabla en la entrada de datos con 4 columnas 2º: Puedo poner la cabecera fija cómodamente.
 imprimirTablaPredeterminada(){
-	echo ""
+	
 	echo "    │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │"
 	echo "┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤"
 	imprimirTabla "$P_NOMBRE" "$P_TLLEGADA" "$P_TEJECUCION" "$P_TAMANIO" "$P_PRIORIDAD" "$P_TESPERA" "$P_TRETORNO" "$P_TRESTANTE" "$P_POSINI" "$P_POSFIN" "$P_ESTADO"
-	echo "└───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘"
+	#echo "└───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘"
 }
 
 
@@ -986,6 +1425,11 @@ imprimirTabla(){
 	local -i j
 	local -i k
 	local separadorHorizontal="───────────────────────────"	#Cualquier tamaño, luego se recorta y se ajusta.
+
+	#Array que almacena el número de huecos máximo que puede ocupar el string a imprimir de cada proceso.
+	#Por ejemplo, la referencia (columna/posArray nº 1) del proceso puede ocupar como máximo 3 huecos (p01 a p99), por lo que en la tabla imprimiremos 3 huecos máximo
+	declare -a anchosTabla=(0 3 3 3 3 3 4 4 4 17 0 0 4 4)
+
 
 	for k in "$@"; do #imprime la cabecera de la tabla
 		printf " %*b" "${anchosTabla[$k]}" "${B_L_YELLOW}${cabeceraProcesos[$k]}${NC}"
@@ -1007,23 +1451,86 @@ imprimirTabla(){
 	done
 }
 
-# Nombre: convertirFicheroColorEnBlancoNegro 	
-# Descripción: Lee un fichero formateado con ASCII Color Schemes y lo convierte en Blanco y negro
-# 		Elimina los colores usados en este script y otros chars de escape para poder ser visualizados en cualquier editor de texto
-# Date: 29/02/2020
-# Documentation: https://stackoverflow.com/questions/19296667/remove-ansi-color-codes-from-a-text-file-using-bash
-# @Param $1: Direccion del fichero 1 a convertir
-# @Param $2: Dirección del fichero 2 en el que se volcará el resultado
-# @Param $3: String boolano ("true"), en el que se indica si se quiere borrar el fichero original
-convertirFicheroColorEnBlancoNegro(){
-	
-	sed -r "s/\x1B\[(([0-9]{1,2})?(;)?([0-9]{1,2})?)?[m,K,H,f,J]//g" "$1" > "$2"
+# Nombre: nularColumna
+# Date: 05/03/2020
+# Descripción:  Actualiza toda una columna del STRUCT/${procesos[]} con el valor "-"
+# Ejemplo de uso: Nulado inicial de las columnas que no han sido introducidas mediante la entrada.
+# @Param $@: Todos los enteros/valores del struct que queremos vaciar
+nularColumna(){
+	local -r valorNull="-"
+	local -i columna
 
-	if [[ $3 = "true" ]];then
+	for columna in "$@"; do
+		for ((i=1; i<=numProc; i++));do
+
+			if [[ $columna -eq $P_ESTADO ]];then
+				procesos[$i,$columna]=$STAT_SISTEMA
+			else
+				procesos[$i,$columna]=$valorNull
+			fi
+
+		done
+	done
+}
+
+
+
+# Nombre: DEV_ImprimirColores
+# Date: 05/03/2020
+# Descripción: Imprime por todos los procesos en el sistema: El color del string y de fondo asignado
+DEV_ImprimirColores(){
+	local string1="test"
+	local string2=987023
+	for ((i = 1; i<= numProc; i++)); do
+		echo -e "Índice $i: ${procesos[$i,$P_COLORLETRA]}STRING${NC}   ${procesos[$i,$P_COLOR]}FONDO${NC}      |"
+	done
+	for ((i = 1; i<= numProc; i++)); do
+		printf "${procesos[$i,$P_COLORLETRA]}%-.*s${NC}   ${procesos[$i,$P_COLOR]}%-.*s${NC}      |\n" $i "printf" $i "printf"
 		
-		rm "$1" && echo "El fichero $1 ha sido borrado"
+	done
+	for ((i = 1; i<= numProc; i++)); do
+		printf "${procesos[$i,$P_COLORLETRA]}%*s${NC}   ${procesos[$i,$P_COLOR]}%-*s${NC}      |\n" $i "${string1:0:$i}" $i "${string2%:0:$i}"
+	done
+	read -ers
+}
+
+# Nombre: asignarColorProceso.
+# Date: 05/03/2020
+# Descripción: Pasado el índce del proceso y un entero, se asignará a dicho proceso el color correspondiente al entero.
+# Ejemplo de uso: Al introducir un proceso manualmente, se le asigna el color al momento! 
+# Nota: Los arrays de colores deben tener el mismo tamaño y los colores en la misma posición.
+# @Param $1: índice/puntero al proceso en la tabla procesos
+# @Param $2: entero cualquiera
+asignarColorProceso(){
+
+	if [[ $1 -gt 0 ]] && [[ $1 -le $numProc ]]; then
+		procesos[$1,$P_COLOR]=${coloresFondo[$2%${#coloresFondo[@]}]}
+		procesos[$1,$P_COLORLETRA]=${coloresLetras[$2%${#coloresLetras[@]}]}
+	else
+		imprimirErrorCritico "El proeso intorudcido no se encuentra en la tabla"
 	fi
 }
+
+# Nombre: asignarColoresTabla
+# Date: 05/03/2020
+# Descripción: Rellena las columnas $P_COLOR y $P_COLORLETRA de la tabla procesos con colores
+# Ejemplo de uso: Al introducir los procesos por fichero/Random, podemos asignar a todos los procesos colores!
+asignarColoresTabla(){
+	local -i i
+
+	for ((i=1; i <= numProc; i++)); do
+		asignarColorProceso "$i" "$i"
+	done
+}
+
+
+
+#  __  __                           _       
+# |  \/  | ___ _ __ ___   ___  _ __(_) __ _ 
+# | |\/| |/ _ \ '_ ` _ \ / _ \| '__| |/ _` |
+# | |  | |  __/ | | | | | (_) | |  | | (_| |
+# |_|  |_|\___|_| |_| |_|\___/|_|  |_|\__,_|
+#                                           
 
 # Nombre: inicializarArrays
 # Descripción: inicializa arrays necesario antes de la ejecución
@@ -1109,30 +1616,6 @@ eliminarPosProceso(){
 	local -r valorNull="-"
 	procesos[$1,$P_POSINI]=$valorNull
 	procesos[$1,$P_POSFIN]=$valorNull
-}
-
-# Nombre: nularColumna
-# Date: 05/03/2020
-# Descripción:  Actualiza toda una columna del STRUCT/${procesos[]} con el valor "-"
-# Ejemplo de uso: Nulado inicial de las columnas que no han sido introducidas mediante la entrada.
-# @Param $@: Todos los enteros/valores del struct que queremos vaciar
-nularColumna(){
-	local -r valorNull="-"
-	local -i columna
-
-	for columna in "$@"; do
-		for ((i=1; i<=numProc; i++));do
-
-			if [[ $columna -eq $P_ESTADO ]];then
-				procesos[$i,$columna]=$STAT_SISTEMA
-			else
-				procesos[$i,$columna]=$valorNull
-			fi
-
-		done
-	done
-
-
 }
 
 # Nombre: vaciarMemoria
@@ -1382,153 +1865,14 @@ DEV_modificarMemoria(){
 	fi
 }
 
-# Nombre: DEV_ImprimirColores
-# Date: 05/03/2020
-# Descripción: Imprime por todos los procesos en el sistema: El color del string y de fondo asignado
-DEV_ImprimirColores(){
-	local string1="test"
-	local string2=987023
-	for ((i = 1; i<= numProc; i++)); do
-		echo -e "Índice $i: ${procesos[$i,$P_COLORLETRA]}STRING${NC}   ${procesos[$i,$P_COLOR]}FONDO${NC}      |"
-	done
-	for ((i = 1; i<= numProc; i++)); do
-		printf "${procesos[$i,$P_COLORLETRA]}%-.*s${NC}   ${procesos[$i,$P_COLOR]}%-.*s${NC}      |\n" $i "printf" $i "printf"
-		
-	done
-	for ((i = 1; i<= numProc; i++)); do
-		printf "${procesos[$i,$P_COLORLETRA]}%*s${NC}   ${procesos[$i,$P_COLOR]}%-*s${NC}      |\n" $i "${string1:0:$i}" $i "${string2%:0:$i}"
-	done
-	read -ers
-}
-# Nombre: asignarColoresTabla
-# Date: 05/03/2020
-# Descripción: Rellena las columnas $P_COLOR y $P_COLORLETRA de la tabla procesos con colores
-# Ejemplo de uso: Al introducir los procesos por fichero/Random, podemos asignar a todos los procesos colores!
-asignarColoresTabla(){
-	local -i i
 
-	for ((i=1; i <= numProc; i++)); do
-		asignarColorProceso "$i" "$i"
-	done
-}
+#   ____ ____  _   _ 
+#  / ___|  _ \| | | |
+# | |   | |_) | | | |
+# | |___|  __/| |_| |
+#  \____|_|    \___/ 
+#     
 
-# Nombre: asignarColorProceso.
-# Date: 05/03/2020
-# Descripción: Pasado el índce del proceso y un entero, se asignará a dicho proceso el color correspondiente al entero.
-# Ejemplo de uso: Al introducir un proceso manualmente, se le asigna el color al momento! 
-# Nota: Los arrays de colores deben tener el mismo tamaño y los colores en la misma posición.
-# @Param $1: índice/puntero al proceso en la tabla procesos
-# @Param $2: entero cualquiera
-asignarColorProceso(){
-
-	if [[ $1 -gt 0 ]] && [[ $1 -le $numProc ]]; then
-		procesos[$1,$P_COLOR]=${coloresFondo[$2%${#coloresFondo[@]}]}
-		procesos[$1,$P_COLORLETRA]=${coloresLetras[$2%${#coloresLetras[@]}]}
-	else
-		imprimirErrorCritico "El proeso intorudcido no se encuentra en la tabla"
-	fi
-}
-# Nombre: truncarMemoria
-# Date: 08/03/2020
-# Parámetros: Utiliza la variable memoriaTruncada declarada en dibujarMemoria
-# Descripción: rellena un array bidimensional con el string de memoria a imprimir.
-#		este nuevo string permite representar la memoria de forma dínamica, dependiendo del ancho del terminal.
-truncarMemoria(){
-	local -i ultimaPosMemEmplazada=1
-	local    ultimoIndiceEncontrado=-1
-	local -i i
-	local -i j
-	
-	#Últimas i,j -> Almacena la última posición en la que se dibuja memoria, para añadir al final de la barra el número con la memoria total
-	local -i ultimaI
-	local -i ultimaJ
-	for (( i=1; i<= (altoMemoriaTruncada*3); i+=3 )); do
-		for ((j=1; j <= anchoTerminalBloques; j++)); do	#La línea de memoria empieza en 1
-			memoriaTruncada[$i,$j]=${memoriaSegunNecesidades[$ultimaPosMemEmplazada,$MEM_TOSTRING]}
-			
-			if [[ ${memoriaSegunNecesidades[$ultimaPosMemEmplazada,$MEM_INDICE]} -ne $ultimoIndiceEncontrado ]];then
-				ultimoIndiceEncontrado=${memoriaSegunNecesidades[$ultimaPosMemEmplazada,$MEM_INDICE]}
-				
-				#Fila de los nombres
-				if [[ $ultimoIndiceEncontrado -eq $MEM_HUECO_VACIO ]]; then #Si el hueco está vacío
-					memoriaTruncada[$((i-1)),$j]="---"
-				else	#Nombre del proceso
-					memoriaTruncada[$((i-1)),$j]=${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
-				fi
-
-				#Fila de las posiciones
-				if [[ $ultimaPosMemEmplazada -lt 10 ]]; then
-					memoriaTruncada[$((i+1)),$j]="$((ultimaPosMemEmplazada-1))  "	#Metemos espacios al final para que no se descuadre, si el tamaño es >=100, se descuadra
-				else															#Sería poner un elif con el tamaño del int, pero me da pereza, pd: he tardado más escribiendo esto
-					memoriaTruncada[$((i+1)),$j]="$((ultimaPosMemEmplazada-1)) "		#que haciendolo, un saludo: Jorge (09/03/2020 - 13:17)
-				fi
-			else
-				memoriaTruncada[$((i-1)),$j]="   "		 #No hay proceso -> Vacío
-				memoriaTruncada[$((i+1)),$j]="   "		 #No hay dirección al no haber cambio de proceso -> Vacío
-			fi
-			((ultimaPosMemEmplazada++))
-			ultimaI=$i
-			ultimaJ=$j
-			if [[ $ultimaPosMemEmplazada -gt $tamMemoria ]];then break; fi
-
-		done
-			ultimoIndiceEncontrado=-1 #reseteo para que se imprima siempre en cada línea la dirección y el proceso
-	done
-
-	#Añade los elementos al margen izquierdo
-	for (( i=1; i<= (altoMemoriaTruncada*3); i+=3 )); do
-		memoriaTruncada[$((i-1)),0]="   "
-		memoriaTruncada[$((i  )),0]="   "
-		memoriaTruncada[$((i+1)),0]="   "
-	done
-
-	#Añade el título de la barra
-	memoriaTruncada[1,0]="${NC}BM|"
-	#Añade el fin de la barra (tamaño de memoria final)
-	memoriaTruncada[$ultimaI,$ultimaJ]="${memoriaTruncada[$ultimaI,$ultimaJ]}|$tamMemoria"
-
-}
-
-# Nombre: dibujarMemoria
-# Descripción: Muestra por pantalla la memoria truncada
-# @Param: $1 string de control: si el string es "mostrarStatsMemoria", se muestra por pantalla el uso de memoria y el 
-dibujarMemoria(){
-	local -i memoriaEnUso
-	local memoriaEnUsoPorciento #Es un string al ser float
-	declare -A memoriaTruncada
-	declare -i anchoTerminal=$(tput cols) #En columnas
-	declare -i anchoTerminalBloques=$(( anchoTerminal/3 - 2)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color || restamos unidades para dejar margen para maniobrar
-	declare -i altoMemoriaTruncada
-	
-	#Calculamos el alto de memoria (el número de filas que ocupará truncada)
-	if [[ $((tamMemoria%anchoTerminalBloques)) == 0 ]];then
-		altoMemoriaTruncada=$((tamMemoria/anchoTerminalBloques))
-	else	#Si la memoria ocupa parte de una líena, la asignamos entera
-		altoMemoriaTruncada=$(( ( tamMemoria/anchoTerminalBloques ) + 1 ))
-	fi
-
-	#Stats mememoria:
-	if [[ $1 = "mostrarStatsMemoria" ]]; then
-		memoriaEnUso=$((tamMemoria-memoriaLibre))
-		memoriaEnUsoPorciento=$(echo "scale=2;100*$memoriaEnUso/$tamMemoria" | bc -l) 
-		imprimirLCyan "Uso de memoria: $memoriaEnUso/$tamMemoria ($memoriaEnUsoPorciento%) -> Memoria libre: $memoriaLibre"
-	fi
-
-	#for((i=1;i<=tamMemoria;i++)); do #Imprime los índices de memoria para mejorar el flujo
-	#	break
-	#	echo -n "${memoriaSegunNecesidades[$i,$MEM_INDICE]},"
-	#done
-	#echo "" #salto de línea
-
-	truncarMemoria 	#Imprimimos la memoria truncada
-	for (( i= 0; i< 3*altoMemoriaTruncada; i++ ));do
-		
-		for (( j=0; j<=anchoTerminalBloques; j++));do
-			echo -en "${memoriaTruncada[$i,$j]}"
-		done
-		echo ""
-	done
-}
 
 # Nombre: obtenerProcesoConMayorPrioridad
 # Descripción: De entre todos los procesos qeu están en memoria, selecciona el proceso con la prioridad más alta.
@@ -1609,6 +1953,7 @@ ejecutarUnCiloDeCPU(){
 	for((i=1;i<=numProc;i++)); do
 		if [[ ${procesos[$i,$P_ESTADO]} == "$STAT_MEMO" ]] || [[ ${procesos[$i,$P_ESTADO]} == "$STAT_COLA" ]]; then
 			((procesos[$i,$P_TESPERA]++))
+			procesos[$i,$P_TRETORNO]=${procesos[$i,$P_TESPERA]}
 		fi
 
 		if [[ ${procesos[$i,$P_ESTADO]} == "$STAT_ENCPU" ]] ||  [[ ${procesos[$i,$P_ESTADO]} == "$STAT_APROP_PAUSA" ]]; then
@@ -1639,198 +1984,13 @@ comprobarSiElProcesoEnCPUHaTerminado(){
 	
 }
 
-# Nombre: truncarBarraCPU
-# Date: 09/03/2020
-# Descripción: Trunca la barra de CPU, y añade el tiempo de inicio y fin de cada proceso, así como el nombre correspondiente.
-# Nota: Tiene un uso similar al truncado de memoria. Los cálculos de las distintas variables aquí referenciadas han sido realizados en dibujarEstadoCPU()
-#			ya que es necesario saber de antemano el ancho y alto del array a imprimir y a generar, y puede variar si se calcula 2 veces, una en cada función.
-#			Además, aquí no tenemos un vector.length para saber cuanto mide un array, bash-ura de lenguaje. 
-#		Podría hacerse en una misma función, pero los parámetros en Bash son un dolor, y paso de perder el tiempo haciendo un código de muy alta calidad.
-#			
-truncarBarraCPU(){
-	declare -a barraTiempoColor #Array que contiene los string a imprimir, generado en: colorearBarraMemoria. En este caso hemos trabajado con 2 arrays y no con uno, porque soy bobo.
-									#PD: no es lo más eficiente, ya que se colorea cada vez, quizá debería hacerlo en el momento, como con la memoria? Dunno m8
-	local -i i
-	local -i j
-	local -i ultimaPosMemEmplazada=0
-	local    ultimoIndiceEncontrado=-1
-
-	#Últimas i,j -> Almacena la última posición en la que se dibuja memoria, para añadir al final de la barra el número con la memoria total
-	local -i ultimaI
-	local -i ultimaJ
-	colorearBarraCPU
-
-	for (( i=1; i<= (altoLineaTiempoTruncada*3); i+=3 )); do
-		for ((j=1; j <= anchoTerminalBloques; j++)); do	#La barra de CPU empieza en 0
-
-			#Volcamos la fila intermedia (barras de color)
-			lineaTiempoTruncada[$i,$j]=${barraTiempoColor[$ultimaPosMemEmplazada]}
-
-			#Si no coincide con la última posición: Significa que hay otro proceso -> añadimos ref y tiempo en las líneas.
-			if [[ ${lineaEstadoCPU[$ultimaPosMemEmplazada]} -ne $ultimoIndiceEncontrado ]];then
-				ultimoIndiceEncontrado=${lineaEstadoCPU[$ultimaPosMemEmplazada]}
-				
-				#Fila de los nombres
-				if [[ $ultimoIndiceEncontrado -eq 0 ]]; then #Si el hueco está vacío (al no haber proceso, CPU vacía en ese instante)
-					lineaTiempoTruncada[$((i-1)),$j]="${NC}---"
-				else
-					lineaTiempoTruncada[$((i-1)),$j]=${NC}${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
-				fi
-
-				#Fila de las posiciones
-				if [[ $ultimaPosMemEmplazada -lt 10 ]]; then
-					lineaTiempoTruncada[$((i+1)),$j]="$ultimaPosMemEmplazada  "	#Metemos espacios al final para que no se descuadre, si el tamaño es >=100, se descuadra
-				else															#Sería poner un elif con el tamaño del int, pero me da pereza, pd: he tardado más escribiendo esto
-					lineaTiempoTruncada[$((i+1)),$j]="$ultimaPosMemEmplazada "		#que haciendolo, un saludo: Jorge (09/03/2020 - 13:17)
-				fi
-			else
-				lineaTiempoTruncada[$((i-1)),$j]="   "		 #No hay cambio de proceso-> Vacío
-				lineaTiempoTruncada[$((i+1)),$j]="   "		 #No hay dirección al no haber cambio de proceso -> Vacío
-			fi
-
-			((ultimaPosMemEmplazada++))
-			ultimaI=$i
-			ultimaJ=$j
-			if [[ $ultimaPosMemEmplazada -gt $tiempoEjecucion ]];then break; fi	#Se ha emplazado toda la memoria
-		done
-			ultimoIndiceEncontrado=-1 #reseteo para que se imprima siempre en cada línea la dirección y el proceso
-	done
-	
-	#Añade los elementos al margen izquierdo
-	for (( i=1; i<= (altoLineaTiempoTruncada*3); i+=3 )); do
-		lineaTiempoTruncada[$((i-1)),0]="   "
-		lineaTiempoTruncada[$((i  )),0]="   "
-		lineaTiempoTruncada[$((i+1)),0]="   "
-	done
-	lineaTiempoTruncada[$((1  )),0]="${NC}BT|"
-
-	#Fin barra (pone el proceso actual en CPU pero no dibuja la barra)
-
-	if [[ $procesoCPU -ne 0 ]]; then
-		lineaTiempoTruncada[$((ultimaI-1)),$ultimaJ]="${NC}${procesos[$procesoCPU,$P_NOMBRE]}"
-		lineaTiempoTruncada[$ultimaI,$ultimaJ]="${NC}${lineaTiempoTruncada[$ultimaI,$ultimaJ]}|"
-	fi
-}
-
-colorearBarraCPU(){
-	local colorProceso
-	local colorLetraProceso
-
-	for ((i=0; i< tiempoEjecucion; i++)); do
-		if [[ ${lineaEstadoCPU[$i]} -ne 0 ]]; then
-			colorProceso=${procesos[${lineaEstadoCPU[$i]},$P_COLOR]}
-			colorLetraProceso=${procesos[${lineaEstadoCPU[$i]},$P_COLORLETRA]}
-		else
-			colorProceso=$_WHITE
-			colorLetraProceso=$WHITE
-		fi
-		barraTiempoColor+=("${colorProceso}${colorLetraProceso}[=]${NC}") #3 espacios porque es el ancho del proceso que desea el profesor
-	done
-	
-}
-# Nombre: dibujarEstadoCPU
-# Date: 09/03/2020
-# Descripción: Imprime el estado de la CPU por pantalla 
-dibujarEstadoCPU(){
-	local -i
-	declare -i anchoTerminal=$(tput cols) #En columnas
-	declare -i anchoTerminalBloques=$((anchoTerminal/3 - 2)) #Bloques -> bloques de memoria. Un bloque/unidad de memoria se representa con 3 espacios/columnas de un color || restamos 1 unidad para dejar margen para maniobrar
-	declare -A lineaTiempoTruncada
-	declare -i altoLineaTiempoTruncada
-	
-	#Calculamos el alto de memoria (el número de filas que ocupará truncada)
-	if [[ $((tiempoEjecucion%anchoTerminalBloques)) == 0 ]];then
-		if [[ tiempoEjecucion -eq 0 ]]; then #Con tiempo 0 la CPU está vacía, pero queremos mostrarla, por lo que hay que forzar el valor a 1
-			altoLineaTiempoTruncada=1
-		else
-			altoLineaTiempoTruncada=$((tiempoEjecucion/anchoTerminalBloques))
-		fi
-	else	#Si la memoria ocupa parte de una líena, la asignamos entera
-		altoLineaTiempoTruncada=$(( ( tiempoEjecucion/anchoTerminalBloques ) + 1 ))
-	fi
-
-	truncarBarraCPU
-
-	for (( i= 0; i<= 3*altoLineaTiempoTruncada; i++ ));do
-		for (( j=0; j<=anchoTerminalBloques ; j++));do
-			echo -en "${lineaTiempoTruncada[$i,$j]}"
-		done
-		echo ""
-	done
-}
-
-# Nombre: imprimirTiemposMedios
-# Descripción: Imprime el tiempo medio de Ejecución, Espera y Retorno con decimales
-# Date: 23/09/2020
-# @Param $1: Si es "mostrarEjecución" muestra el tiempo medio de ejecución
-imprimirTiemposMedios(){
-	#Tiempos Acumulados
-	#local tEjecAcumulado=0
-	local tEsperaAcumulado=0
-	local tRetornoAcumulado=0
-
-	#local nProcesosEjecucion=0
-	local nProcesosEspera=0
-	local nProcesosRetorno=0
-	#Tiempos medios
-	local tEjecMedio
-	local tEsperaMedio
-	local tRetornoMedio
-
-	if  [[ $memoriaLibre -eq $tamMemoria ]] && [[ $procEjecutados -eq 0 ]]; then
-	echo no se pinta la memoria
-		return
-	fi
-
-	calcularTiemposMedios(){
-
-		#Acumulador
-		for ((i=1; i<=numProc; i++));do
-			#Tiempo Ejecución Acumulado
-			#if [[ $(esEntero "${procesos[$i,3]}") = "true" ]]; then
-			#	tEjecAcumulado=$(( tEjecAcumulado + ${procesos[$i,3]}))
-			#	((nProcesosEjecucion++))
-			#fi
-			
-			#Tiempo Espera Acumulado
-			if [[ $(esEntero "${procesos[$i,8]}") = "true" ]]; then
-				tEsperaAcumulado=$(( tEsperaAcumulado + ${procesos[$i,$P_TESPERA]}))
-				((nProcesosEspera++))
-			fi
-
-			#Tiempo Retorno Acumulado
-			if [[ $(esEntero "${procesos[$i,8]}") = "true" ]]; then
-				tRetornoAcumulado=$(( tRetornoAcumulado + ${procesos[$i,8]}))
-				((nProcesosRetorno++))
-			fi
-
-		done
-
-		#obsoleto
-		#tEjecMedio=$(echo "scale=2;$tEjecAcumulado/$nProcesosEjecucion" | bc -l)
-		tEsperaMedio=$(echo "scale=2;$tEsperaAcumulado/$nProcesosEspera" | bc -l)
-		tRetornoMedio=$(echo "scale=2;$tRetornoAcumulado/$nProcesosRetorno" | bc -l)
-
-		#Ejecución medio como la suma de espera + retorno
-		tEjecMedio=$(echo "scale=2;$tEsperaMedio+$tRetornoMedio" | bc -l)
-	}
-
-	calcularTiemposMedios # > /dev/null 2>&1
-
-	echo ""
-	
-
-	imprimirLCyan "Tiempo de espera medio: $BOLD$tEsperaMedio"
-	imprimirLCyan "Tiempo de retorno medio: $BOLD$tRetornoMedio"
-	imprimirLCyan "Tiempo de ejecución medio: $BOLD$tEjecMedio"
-	
-}
-
-
+# Nombre: ejecucionApropiativo
+# Descripción: Realiza los cambios en CPU de los procesos si el modo apropiativo está activado ($opcionApropiativo = s)
+# Date: 23/03/2020
 ejecucionApropiativo(){
 	
 
-	if [[ $opcionApropiativo = "n" ]]; then
+	if [[ ! $opcionApropiativo = "s" ]]; then
 		return 0
 	fi
 	
@@ -1857,8 +2017,17 @@ ejecucionApropiativo(){
 	
 	#Actualizamos el proceso que hemos metido en CPU
 	procesos[$procesoCPU,$P_ESTADO]="$STAT_ENCPU"
-
 }
+
+
+
+
+#                  _       
+#  _ __ ___   __ _(_)_ __  
+# | '_ ` _ \ / _` | | '_ \ 
+# | | | | | | (_| | | | | |
+# |_| |_| |_|\__,_|_|_| |_|
+#                          
 
 # Nombre: ejecucion
 # Descripción: Loop central con la ejecución de los procesos
@@ -1868,7 +2037,8 @@ ejecucion(){
 	local -i i
 	local -i haHabidoUnCambio #bool que se usa para ver cuando ha ocurrido un evento. Los eventos suelen imprimir STRINGS especiales!
 	archivoMensajes=$(mktemp) #archivo temporal que almacenará los textos que han aparecido durante la ejecución / es necesario para que el Tiempo salga antes que estos textos si ha habido un cambio
-	procesoCPU=0	#int que almacena la fila correspondiente al proceso que está en ejecución 
+	procesoCPU=0	#int que almacena/apunta a la fila correspondiente al proceso que está en ejecución 
+	
 	#Empieza la ejecucion del programa
 	memoriaLibre=$tamMemoria
 	vaciarMemoria
@@ -1901,11 +2071,12 @@ ejecucion(){
 		while (( tamCola >= 1 )); do
 			if [[ ${procesos[${cola[1]},$P_TAMANIO]} -le $memoriaLibre ]]; then
 				local -i procesoMem="${cola[1]}" #lo guardamos para poder hacer el printf tras añadir el procesos: Meramente estético (por si hay reubicabilidad, que salga después del mensaje)
-				
+
 				aniadirProcesoAMemoria "$procesoMem" >> "$archivoMensajes"	#al reubicar se imprime un mensaje!
 				procesos[$procesoMem,$P_TRESTANTE]=${procesos[$procesoMem,$P_TEJECUCION]} #Inicializamos el tiempo de ejecución restante
 				
-				printf "${L_GREEN}%s ${procesos[$procesoMem,$P_COLORLETRA]}%s ${L_GREEN}%s ${NC}%d\n" "El proceso" "${procesos[$procesoMem,$P_NOMBRE]}"  "ha sido introducido en memoria en el instante" "$tiempoEjecucion" >> "$archivoMensajes"	
+				printf "${L_GREEN}%s ${procesos[$procesoMem,$P_COLORLETRA]}%s ${L_GREEN}%s ${NC}%d\n" \
+				"El proceso" "${procesos[$procesoMem,$P_NOMBRE]}"  "ha sido introducido en memoria en el instante" "$tiempoEjecucion" >> "$archivoMensajes"	
 				haHabidoUnCambio=1
 			else
 				break
@@ -1930,7 +2101,6 @@ ejecucion(){
 			
 			cat "$archivoMensajes" #Visualizamos por pantalla los mensajes
 
-			echo "════════════════════════════════════════════════════════════════════════════"
 			imprimirTablaPredeterminada
 			echo -e "${B_WHITE}P. más alta: $priorMax | P. más baja: $priorMin ${NC}"
 			
@@ -1968,80 +2138,11 @@ ejecucion(){
 	pantallaFinal 
 }
 
-# Nombre: abrirInforme
-# Descripción: Función con distintas opciones para abrir el informe
-# Date: 20/03/2020
-abrirInforme(){
-	local opcion
-	imprimirLCyan "Qué desea visualizar?"
-	echo "  1) Informe a color completo (con \$cat)"
-	echo "  2) Informe a color con scroll (con \$less, estilo Editor VI)"
-	echo "  3) Informe a color secuencial (con \$more)"
-	echo "  4) Informe en blanco y negro completo(con \$cat)"
-	echo "  5) Informe en blanco y negro con scroll (con \$less, estilo Editor VI)"
-	echo "  6) Informe en blanco y negro secuencial (con \$more)"
-	echo "  7) Editar Informe blanco y negro con VIM"
-	echo "  8) Editar Informe blanco y negro con NANO"
-	echo "  *) Salir"
 
-	read -r opcion
-
-	case $opcion in
-	1)
-		cat "$INFORME_FILENAME"
-	;;
-	2)
-		less -R "$INFORME_FILENAME"
-	;;
-	3)
-		more "$INFORME_FILENAME"
-	;;
-	4)
-		cat "$INFORMEBN_FILENAME"
-	;;
-	5)
-		less "$INFORMEBN_FILENAME"
-	;;
-	6)
-		more "$INFORME_FILENAME"
-	;;
-	7)
-		vim "$INFORMEBN_FILENAME"
-	;;
-	8)
-		nano "$INFORMEBN_FILENAME"
-	;;
-	*)
-		echo -n ""
-	;;
-	esac
-
-	
-}
-
-# Nombre: renombrarDatosEntrada
-# Descripción: Renombra el archivo datos.txt para que los datos no sean borrados en la proxima ejecución
-# Date: 19/03/2020
-renombrarDatosEntrada(){
-	local opcion
-	local nombreArchivo
-	local -i haFallado=0
-	scanfSiNo "¿Desea guardar los datos de entrada con otro nombre? [s/n]:" "opcion"
-
-	if [[ $opcion = s ]]; then
-		echo  "Introduzca el nuevo nombre"
-		echo  "Recordatorio: Es necesario añadir el formato (.txt) y evitar usar Slashes [ / ], ya que son tomadas como un directorio"
-		read -r "nombreArchivo"
-
-		cat "${DATA_DIRECTORY}datos.txt" > "${DATA_DIRECTORY}$nombreArchivo" || haFallado=1 #Se podría hacer con un cp o un move, pero con esto nos ahorramos problemas
-
-		
-		if [[ $haFallado -eq 1 ]];then
-			renombrarDatosEntrada
-		fi
-	fi
-}
-#main
+# Nombre: main
+# Descripción: Main del programa
+# Se llama desde global para poder cargar todas las variables globales
+#
 main(){
 	
 	imprimirCabecera 
@@ -2052,18 +2153,16 @@ main(){
 	nularColumna "$P_TRETORNO" "$P_POSINI" "$P_POSFIN" "$P_ESTADO" "$P_TRESTANTE" "$P_TESPERA"
 	clear
 	imprimirTabla 1 2 3 4 5 
-	
+	echo -e "
+	╔═══════════════════════════════════════╗
 
+	 ${L_GREEN} Apropiativo: ${NC}${B_BLUE}$opcionApropiativo${NC}	
+	 ${L_GREEN} Tamaño de Memoria: ${NC}${B_BLUE}$tamMemoria${NC}			
+	 ${L_GREEN} Número de Procesos: ${NC}${B_BLUE}$numProc ${NC}		
+	 ${L_GREEN} Prioridad Mínima: ${NC}${B_BLUE}$priorMin${NC}			
+	 ${L_GREEN} Prioridad Máxima: ${NC}${B_BLUE}$priorMax${NC}			
 
-printf " ${L_YELLOW}%s" "╔═══════════════════════════════════════╗${NC}"
-printf " ${L_YELLOW}║ ${L_GREEN}%s"
-							
-	${L_GREEN} Tamaño de Memoria: ${NC}${B_BLUE}$tamMemoria${NC}		
-	${L_GREEN} Número de Procesos: ${NC}${B_BLUE}$numProc${NC}		
-	${L_GREEN} Prioridad Mínima: ${NC}${B_BLUE}$priorMin${NC}		
-	${L_GREEN} Prioridad Máxima: ${NC}${B_BLUE}$priorMax${NC}		
-							
-	═══════════════════════════════════════
+	╚═══════════════════════════════════════╝"
 	
 	imprimirLCyan "Pulse [enter] para continuar" -n
 	read -ers
@@ -2080,8 +2179,6 @@ finMain(){
 	renombrarDatosEntrada
 	abrirInforme
 }
-
-
 
 comprobacionDirectorio stringDeBúsqueda, no tiene valor alguno
 global #Carga las variables globales y ejecuta el main -> Está hecho así para poder minimizar todas las variables de global en el outline de VSCODE
