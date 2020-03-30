@@ -1178,8 +1178,9 @@ truncarMemoria(){
 	#Añade el título de la barra
 	memoriaTruncada[1,0]="${NC}BM|"
 	#Añade el fin de la barra (tamaño de memoria final)
-	memoriaTruncada[$ultimaI,$ultimaJ]="${memoriaTruncada[$ultimaI,$ultimaJ]}|$tamMemoria"
-
+	memoriaTruncada[$((ultimaI-1)),$ultimaJ]="   ${NC}|"
+	memoriaTruncada[$ultimaI,$ultimaJ]="${memoriaTruncada[$ultimaI,$ultimaJ]}${NC}|$tamMemoria"
+	memoriaTruncada[$((ultimaI+1)),$ultimaJ]="   ${NC}|"
 }
 
 # Nombre: dibujarMemoria
@@ -1215,6 +1216,7 @@ dibujarMemoria(){
 		done
 		echo ""
 	done
+
 }
 # Nombre: truncarBarraCPU
 # Date: 09/03/2020
@@ -1279,18 +1281,18 @@ truncarBarraCPU(){
 		lineaTiempoTruncada[$((i  )),0]="   "
 		lineaTiempoTruncada[$((i+1)),0]="   "
 	done
-	lineaTiempoTruncada[$((1  )),0]="${NC}BT|"
+	lineaTiempoTruncada[$((1  )),0]="${NC}BT|${NC}"
 
 	#Fin barra (pone el proceso actual en CPU pero no dibuja la barra)
 
 	if [[ $procesoCPU -ne 0 ]]; then
-		lineaTiempoTruncada[$((ultimaI-1)),$ultimaJ]="${NC}${procesos[$procesoCPU,$P_NOMBRE]}"
-		lineaTiempoTruncada[$ultimaI,$ultimaJ]="${NC}${lineaTiempoTruncada[$ultimaI,$ultimaJ]}|"
+		lineaTiempoTruncada[$((ultimaI-1)),$ultimaJ]="${NC}${procesos[$procesoCPU,$P_NOMBRE]}${NC}"
+		lineaTiempoTruncada[$ultimaI,$ultimaJ]="${NC}${lineaTiempoTruncada[$ultimaI,$ultimaJ]}${NC}   "
 		lineaTiempoTruncada[$((ultimaI+1)),$ultimaJ]="${NC}$tiempoEjecucion"
 	elif [[ $numProc -eq $procEjecutados ]]; then #Si es el final de la ejecución (Se han ejecutado todos los procesos)
-		lineaTiempoTruncada[$((ultimaI-1)),$ultimaJ]=""
-		lineaTiempoTruncada[$ultimaI,$ultimaJ]="${NC}|$tiempoEjecucion" # ponemos al final de la barra | tamaño memoria
-		lineaTiempoTruncada[$((ultimaI+1)),$ultimaJ]=""
+		lineaTiempoTruncada[$((ultimaI-1)),$ultimaJ]="${NC}"
+		lineaTiempoTruncada[$ultimaI,$ultimaJ]="${NC}|$tiempoEjecucion${NC}" # ponemos al final de la barra | tamaño memoria
+		lineaTiempoTruncada[$((ultimaI+1)),$ultimaJ]="${NC}"
 	fi
 }
 
@@ -1339,6 +1341,7 @@ dibujarEstadoCPU(){
 		done
 		echo ""
 	done
+
 }
 
 # Nombre: imprimirTiemposMedios
@@ -1703,7 +1706,7 @@ ajustarMemoriaParaElProceso(){
 	if (( posicionEnLaQueEmpiezaElHuecoEnMemoria == "null")); then
 		dibujarMemoria	#Dibujamos la memoria una vez para ver la diferencia.
 		reubicarProcesos
-		imprimirAviso "La memoria ha sido reubicada"
+		imprimirAviso "AVISO: La memoria ha sido reubicada"
 		dibujarMemoria	#Dibujamos la memoria para ver el después
 		encontrarHuecoEnMemoria "$1" posicionEnLaQueEmpiezaElHuecoEnMemoria
 	fi
@@ -1941,11 +1944,16 @@ ejecutarUnCiloDeCPU(){
 	
 	#aumenta el tiempo de espera de los procesoso en memoria y en cola
 	for((i=1;i<=numProc;i++)); do
+		#Incremento de ESPERA y tiempo de retorno = tiempo espera
 		if [[ ${procesos[$i,$P_ESTADO]} == "$STAT_MEMO" ]] || [[ ${procesos[$i,$P_ESTADO]} == "$STAT_COLA" ]]; then
 			((procesos[$i,$P_TESPERA]++))
 			procesos[$i,$P_TRETORNO]=${procesos[$i,$P_TESPERA]}
 		fi
-
+		#Incremento de tiempos del APROPIATIVO
+		if [[ ${procesos[$i,$P_ESTADO]} == "$STAT_APROP_PAUSA" ]]; then
+			((procesos[$i,$P_TESPERA]++))
+		fi
+		#Incremento de retorno en pausa y ejecución
 		if [[ ${procesos[$i,$P_ESTADO]} == "$STAT_ENCPU" ]] ||  [[ ${procesos[$i,$P_ESTADO]} == "$STAT_APROP_PAUSA" ]]; then
 			((procesos[$i,$P_TRETORNO]++))
 		fi
@@ -2051,7 +2059,7 @@ ejecucion(){
 		for((i=1;i<=numProc;i++)) do
 			if [[ ${procesos[$i,$P_TLLEGADA]} -eq "$tiempoEjecucion" ]]; then
 				anadirCola $i
-				procesos[$i,$P_TRETORNO]=$(( tiempoEjecucion - ${procesos[$i,$P_TLLEGADA]} ))
+				procesos[$i,$P_TRETORNO]=0
 				printf "${L_MAGENTA}%s ${procesos[$i,$P_COLORLETRA]}%s ${L_MAGENTA}%s ${NC}%d\n" "El proceso" "${procesos[$i,$P_NOMBRE]}" "ha entrado en el sistema en el instante" "$tiempoEjecucion" >> "$archivoMensajes"
 				haHabidoUnCambio=1
 			fi
@@ -2112,7 +2120,7 @@ ejecucion(){
 		local -i
 
 
-
+		echo -e "${B_WHITE}T: $tiempoEjecucion${NC}"
 		imprimirTablaPredeterminada
 		echo "════════════════════════════════════════════════════════════════════════════"
 		dibujarMemoria
