@@ -155,7 +155,7 @@ global(){
 
 	# Strings de memoria que se imprimirán
 	#		Hueco vacío, se imprimen unos corchetes blancos con fondo blanco
-	declare -r MEM_STRING_HUECO_VACIO="$_WHITE${WHITE}[_]${_DEFAULT}"
+	declare -r MEM_STRING_HUECO_VACIO="$_WHITE${WHITE}[ ]${_DEFAULT}"
 	#		Hueco con proceso: Se imrprimen unos corchetes con gorritos, es necesario colorearlos.
 	declare -r MEM_STRING_HUECOSINCOLOR="[^]"	#Se colorea con el color del proceso
 
@@ -1144,13 +1144,13 @@ truncarMemoria(){
 				
 				#Fila de los nombres
 				if [[ $ultimoIndiceEncontrado -eq $MEM_HUECO_VACIO ]]; then #Si el hueco está vacío
-					memoriaTruncada[$((i-1)),$j]="---"
+					memoriaTruncada[$((i-1)),$j]="${NC}---"
 				else	#Nombre del proceso
-					memoriaTruncada[$((i-1)),$j]=${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
+					memoriaTruncada[$((i-1)),$j]=${procesos[$ultimoIndiceEncontrado,$P_COLORLETRA]}${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}${NC}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
 				fi
 
 				#Fila de las posiciones
-				if [[ $ultimaPosMemEmplazada -lt 10 ]]; then
+				if [[ $ultimaPosMemEmplazada -le 10 ]]; then
 					memoriaTruncada[$((i+1)),$j]="$((ultimaPosMemEmplazada-1))  "	#Metemos espacios al final para que no se descuadre, si el tamaño es >=100, se descuadra
 				else															#Sería poner un elif con el tamaño del int, pero me da pereza, pd: he tardado más escribiendo esto
 					memoriaTruncada[$((i+1)),$j]="$((ultimaPosMemEmplazada-1)) "		#que haciendolo, un saludo: Jorge (09/03/2020 - 13:17)
@@ -1253,7 +1253,7 @@ truncarBarraCPU(){
 				if [[ $ultimoIndiceEncontrado -eq 0 ]]; then #Si el hueco está vacío (al no haber proceso, CPU vacía en ese instante)
 					lineaTiempoTruncada[$((i-1)),$j]="${NC}---"
 				else
-					lineaTiempoTruncada[$((i-1)),$j]=${NC}${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
+					lineaTiempoTruncada[$((i-1)),$j]="${procesos[$ultimoIndiceEncontrado,$P_COLORLETRA]}${procesos[$ultimoIndiceEncontrado,$P_NOMBRE]}${NC}"		#ASIGNAMOS EL NOMBRE ARRIBA DE LA BARRA
 				fi
 
 				#Fila de las posiciones
@@ -1289,26 +1289,33 @@ truncarBarraCPU(){
 		lineaTiempoTruncada[$((ultimaI-1)),$ultimaJ]="${NC}${procesos[$procesoCPU,$P_NOMBRE]}${NC}"
 		lineaTiempoTruncada[$ultimaI,$ultimaJ]="${NC}${lineaTiempoTruncada[$ultimaI,$ultimaJ]}${NC}   "
 		lineaTiempoTruncada[$((ultimaI+1)),$ultimaJ]="${NC}$tiempoEjecucion"
+
 	elif [[ $numProc -eq $procEjecutados ]]; then #Si es el final de la ejecución (Se han ejecutado todos los procesos)
-		lineaTiempoTruncada[$((ultimaI-1)),$ultimaJ]="${NC}"
+		#Se ponen las 3 barras verticales para marcar el final
+		lineaTiempoTruncada[$((ultimaI-1)),$ultimaJ]="${NC}|"
 		lineaTiempoTruncada[$ultimaI,$ultimaJ]="${NC}|$tiempoEjecucion${NC}" # ponemos al final de la barra | tamaño memoria
-		lineaTiempoTruncada[$((ultimaI+1)),$ultimaJ]="${NC}"
+		lineaTiempoTruncada[$((ultimaI+1)),$ultimaJ]="${NC}|"
 	fi
 }
-
+# Nombre: colorearBarraCPU
+# Descripción: Rellena el array barraTiempoColor[] con la barra de tiempo coloreada, donde cada posición es un proceso en una unidad de tiempo.
+# Date: 09/03/2020
 colorearBarraCPU(){
 	local colorProceso
 	local colorLetraProceso
-
+	local stringProceso
 	for ((i=0; i< tiempoEjecucion; i++)); do
+
 		if [[ ${lineaEstadoCPU[$i]} -ne 0 ]]; then
 			colorProceso=${procesos[${lineaEstadoCPU[$i]},$P_COLOR]}
 			colorLetraProceso=${procesos[${lineaEstadoCPU[$i]},$P_COLORLETRA]}
+			stringProceso="[=]"
 		else
 			colorProceso=$_WHITE
 			colorLetraProceso=$WHITE
+			stringProceso="[ ]"
 		fi
-		barraTiempoColor+=("${colorProceso}${colorLetraProceso}[=]${NC}") #3 espacios porque es el ancho del proceso que desea el profesor
+		barraTiempoColor+=("${colorProceso}${colorLetraProceso}${stringProceso}${NC}") #3 espacios porque es el ancho del proceso que desea el profesor
 	done
 	
 }
@@ -1949,12 +1956,13 @@ ejecutarUnCiloDeCPU(){
 			((procesos[$i,$P_TESPERA]++))
 			procesos[$i,$P_TRETORNO]=${procesos[$i,$P_TESPERA]}
 		fi
-		#Incremento de tiempos del APROPIATIVO
+		#Incremento de tiempos cuando un proceso está en pausa
 		if [[ ${procesos[$i,$P_ESTADO]} == "$STAT_APROP_PAUSA" ]]; then
+			((procesos[$i,$P_TRETORNO]++))
 			((procesos[$i,$P_TESPERA]++))
 		fi
-		#Incremento de retorno en pausa y ejecución
-		if [[ ${procesos[$i,$P_ESTADO]} == "$STAT_ENCPU" ]] ||  [[ ${procesos[$i,$P_ESTADO]} == "$STAT_APROP_PAUSA" ]]; then
+		#Incremento de retorno durante la ejecución
+		if [[ ${procesos[$i,$P_ESTADO]} == "$STAT_ENCPU" ]]; then
 			((procesos[$i,$P_TRETORNO]++))
 		fi
 	done
@@ -2015,6 +2023,8 @@ ejecucionApropiativo(){
 	
 	#Actualizamos el proceso que hemos metido en CPU
 	procesos[$procesoCPU,$P_ESTADO]="$STAT_ENCPU"
+
+	#NOTA: El apropiativo también cambia los tiempos de retorno y espera, pero eso se ejecuta en ejecutarUnCicloDeCPU
 }
 
 
@@ -2034,7 +2044,7 @@ ejecucion(){
 	local -i tiempoEjecucion=0
 	local -i i
 	local -i haHabidoUnCambio #bool que se usa para ver cuando ha ocurrido un evento. Los eventos suelen imprimir STRINGS especiales!
-	archivoMensajes=$(mktemp) #archivo temporal que almacenará los textos que han aparecido durante la ejecución / es necesario para que el Tiempo salga antes que estos textos si ha habido un cambio
+	archivoMensajes=$(mktemp) #archivo temporal que almacenará los textos que han aparecido durante la ejecución / es necesario para que el Tiempo (T=algo) salga antes que estos textos si ha habido un cambio
 	procesoCPU=0	#int que almacena/apunta a la fila correspondiente al proceso que está en ejecución 
 	
 	#Empieza la ejecucion del programa
@@ -2110,7 +2120,7 @@ ejecucion(){
 			echo -e "${L_CYAN}Número de procesos ejecutados: ${B_WHITE}$procEjecutados/$numProc ${NC}"
 			#breakpoint "Fin del loop $tiempoEjecucion del WHILE"
 			read -ers -p "Pulse [enter] para continuar "
-			echo "════════════════════════════════════════════════════════════════════════════"
+			echo "═════════════════════════════════════════════════════════════════"
 			clear
 		fi
 		ejecutarUnCiloDeCPU
@@ -2122,7 +2132,7 @@ ejecucion(){
 
 		echo -e "${B_WHITE}T: $tiempoEjecucion${NC}"
 		imprimirTablaPredeterminada
-		echo "════════════════════════════════════════════════════════════════════════════"
+		echo "═════════════════════════════════════════════════════════════════"
 		dibujarMemoria
 		dibujarEstadoCPU
 		echo ""
