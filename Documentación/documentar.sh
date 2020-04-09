@@ -4,8 +4,10 @@ declare -r instrucciones="./otros/Instalar zshelldoc.txt"
 declare  nombreScript="./../PrioridadMayorContinuaReubicable.sh"
 declare nombreAdoc="./zsdoc/PrioridadMayorContinuaReubicable.sh.adoc"
 declare -r archivoCabecera="./otros/cabecera.txt"
+
 #Debería sera automático, antes de la línea FUNCTION
 declare -r nLineasOcupaCabeceraSucia=12
+
 # Nombre: scanfSiNo
 # Descripcion: asigna un valor valido a una variable desde el teclado
 # @param $1: texto a imprimir en pantalla para pedir si o no

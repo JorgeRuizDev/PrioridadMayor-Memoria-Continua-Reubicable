@@ -39,248 +39,364 @@ Elige opción:
  ║ ¿Como quieres el algoritmo?                ║
  ║                                            ║
  ║ 1-Estándar                                 ║
+ ║ 2-Apropiativo                              ║
  ║ 5-Ayuda (glosario)                         ║
  ║ 6-Salir del programa                       ║
  ║                                            ║
  ╚════════════════════════════════════════════╝
 
+Elige opción: 
+⚠  El valor '' introducido no válido, intervalo válido [ 1, 7 ]. 
+
 Elige opción:  Ref TLl TEj Pri Mem
- P05 0   3   -24 5  
- P02 3   3   -26 7  
- P03 3   10  -27 7  
- P01 8   8   -27 10 
- P04 13  8   -26 10 
+ P04 0   6   -13 5  
+ P06 8   3   -22 3  
+ P05 9   9   -7  5  
+ P07 10  9   0   6  
+ P03 11  5   -19 3  
+──────────────────────
+ P02 12  9   -4  4  
+ P01 14  4   -12 5  
 
 	╔═══════════════════════════════════════╗
-	║					║
-	║ Tamaño de Memoria: 14			║
-	║ Número de Procesos: 5 		║
-	║ Prioridad Mínima: -27			║
-	║ Prioridad Máxima: -24			║
-	║					║
+
+	  Apropiativo: n	
+	  Tamaño de Memoria: 9			
+	  Número de Procesos: 7 		
+	  Prioridad Mínima: -25			
+	  Prioridad Máxima: 14			
+
 	╚═══════════════════════════════════════╝
-Pulse [enter] para continuarIncio : 1584830348827ms
-El proceso P05 ha entrado en el sistema en el instante 0
-El proceso P05 ha sido introducido en memoria en el instante 0
-El proceso P05 ha sido introducido en la CPU en el instante 0 y ahora se está ejecutando
-════════════════════════════════════════════════════════════════════════════
-
+Pulse [enter] para continuarT: 0
+El proceso P04 ha entrado en el sistema en el instante 0
+El proceso P04 ha sido introducido en memoria en el instante 0
+El proceso P04 ha sido introducido en la CPU en el instante 0 y ahora se está ejecutando
     │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │
 ┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤
  Ref TLl TEj Mem Pri Tesp Tret Trej DirI DirF Estado
- P05 0   3   5   -24 0    0    3    0    4    En Ejecución    
- P02 3   3   7   -26 -    -    -    -    -    Fuera del Sistema
- P03 3   10  7   -27 -    -    -    -    -    Fuera del Sistema
- P01 8   8   10  -27 -    -    -    -    -    Fuera del Sistema
- P04 13  8   10  -26 -    -    -    -    -    Fuera del Sistema
-└───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘
-Instante: 0 | P. más alta: -24 | P. más baja: -27 
-dibujando memoria : 20ms
-Uso de memoria: 5/14 (35.71%) -> Memoria libre: 9
-   P05            ---                        
-BM|[^][^][^][^][^][_][_][_][_][_][_][_][_][_]
-   0              5                          
-fin dibujando memoria : 30ms
-      
-BT|
-   0  
+ P04 0   6   5   -13 0    0    6    0    4    En Ejecución    
+ P06 8   3   3   -22 -    -    -    -    -    Fuera del Sistema
+ P05 9   9   5   -7  -    -    -    -    -    Fuera del Sistema
+ P07 10  9   6   0   -    -    -    -    -    Fuera del Sistema
+ P03 11  5   3   -19 -    -    -    -    -    Fuera del Sistema
+─────────────────────────────────────────────────────────────────
+ P02 12  9   4   -4  -    -    -    -    -    Fuera del Sistema
+ P01 14  4   5   -12 -    -    -    -    -    Fuera del Sistema
+P. más alta: 14 | P. más baja: -25 
+Uso de memoria: 5/9 (55.55%) -> Memoria libre: 4
+   P04            ---         |
+BM|[^][^][^][^][^][ ][ ][ ][ ]|9
+   0              5           |
+   P04
+BT|   
+   0
 
-fin dibujando CPU : 25ms
-Número de procesos ejecutados 0/5
-════════════════════════════════════════════════════════════════════════════
-El proceso P05 ha terminado de ejecutarse en el instante 3 y está siendo desalojado de memoria y CPU
-El proceso P02 ha entrado en el sistema en el instante 3
-El proceso P03 ha entrado en el sistema en el instante 3
-El proceso P02 ha sido introducido en memoria en el instante 3
-El proceso P03 ha sido introducido en memoria en el instante 3
-El proceso P02 ha sido introducido en la CPU en el instante 3 y ahora se está ejecutando
-════════════════════════════════════════════════════════════════════════════
-
+Tiempo de espera medio: 0 || Tiempo de retorno medio: 0
+Número de procesos ejecutados: 0/7 
+═════════════════════════════════════════════════════════════════
+T: 8
+El proceso P06 ha entrado en el sistema en el instante 8
+El proceso P06 ha sido introducido en memoria en el instante 8
+El proceso P06 ha sido introducido en la CPU en el instante 8 y ahora se está ejecutando
     │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │
 ┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤
  Ref TLl TEj Mem Pri Tesp Tret Trej DirI DirF Estado
- P05 0   3   5   -24 0    3    0    -    -    Terminado        
- P02 3   3   7   -26 0    0    3    0    6    En Ejecución    
- P03 3   10  7   -27 0    -    -    7    13   En Memoria       
- P01 8   8   10  -27 -    -    -    -    -    Fuera del Sistema
- P04 13  8   10  -26 -    -    -    -    -    Fuera del Sistema
-└───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘
-Instante: 3 | P. más alta: -24 | P. más baja: -27 
-dibujando memoria : 187ms
-Uso de memoria: 14/14 (100.00%) -> Memoria libre: 0
-   P02                  P03                  
-BM|[^][^][^][^][^][^][^][^][^][^][^][^][^][^]
-   0                    7                    
-fin dibujando memoria : 29ms
-   P05         
-BT|[=][=][=]
-   0        3  
+ P04 0   6   5   -13 0    6    0    -    -    Terminado        
+ P06 8   3   3   -22 0    0    3    0    2    En Ejecución    
+ P05 9   9   5   -7  -    -    -    -    -    Fuera del Sistema
+ P07 10  9   6   0   -    -    -    -    -    Fuera del Sistema
+ P03 11  5   3   -19 -    -    -    -    -    Fuera del Sistema
+─────────────────────────────────────────────────────────────────
+ P02 12  9   4   -4  -    -    -    -    -    Fuera del Sistema
+ P01 14  4   5   -12 -    -    -    -    -    Fuera del Sistema
+P. más alta: 14 | P. más baja: -25 
+Uso de memoria: 3/9 (33.33%) -> Memoria libre: 6
+   P06      ---               |
+BM|[^][^][^][ ][ ][ ][ ][ ][ ]|9
+   0        3                 |
+   P04               ---   P06
+BT|[=][=][=][=][=][=][ ][ ]   
+   0                 6     8
 
-fin dibujando CPU : 25ms
-Número de procesos ejecutados 1/5
-════════════════════════════════════════════════════════════════════════════
-El proceso P02 ha terminado de ejecutarse en el instante 6 y está siendo desalojado de memoria y CPU
-El proceso P03 ha sido introducido en la CPU en el instante 6 y ahora se está ejecutando
-════════════════════════════════════════════════════════════════════════════
-
+Tiempo de espera medio: 0 || Tiempo de retorno medio: 3.00
+Número de procesos ejecutados: 1/7 
+═════════════════════════════════════════════════════════════════
+T: 9
+El proceso P05 ha entrado en el sistema en el instante 9
+El proceso P05 ha sido introducido en memoria en el instante 9
     │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │
 ┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤
  Ref TLl TEj Mem Pri Tesp Tret Trej DirI DirF Estado
- P05 0   3   5   -24 0    3    0    -    -    Terminado        
- P02 3   3   7   -26 0    6    0    -    -    Terminado        
- P03 3   10  7   -27 3    3    10   7    13   En Ejecución    
- P01 8   8   10  -27 -    -    -    -    -    Fuera del Sistema
- P04 13  8   10  -26 -    -    -    -    -    Fuera del Sistema
-└───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘
-Instante: 6 | P. más alta: -24 | P. más baja: -27 
-dibujando memoria : 149ms
-Uso de memoria: 7/14 (50.00%) -> Memoria libre: 7
-   ---                  P03                  
-BM|[_][_][_][_][_][_][_][^][^][^][^][^][^][^]
-   0                    7                    
-fin dibujando memoria : 29ms
-   P05      P02         
-BT|[=][=][=][=][=][=]
-   0        3        6  
+ P04 0   6   5   -13 0    6    0    -    -    Terminado        
+ P06 8   3   3   -22 0    1    2    0    2    En Ejecución    
+ P05 9   9   5   -7  0    0    9    3    7    En Memoria       
+ P07 10  9   6   0   -    -    -    -    -    Fuera del Sistema
+ P03 11  5   3   -19 -    -    -    -    -    Fuera del Sistema
+─────────────────────────────────────────────────────────────────
+ P02 12  9   4   -4  -    -    -    -    -    Fuera del Sistema
+ P01 14  4   5   -12 -    -    -    -    -    Fuera del Sistema
+P. más alta: 14 | P. más baja: -25 
+Uso de memoria: 8/9 (88.88%) -> Memoria libre: 1
+   P06      P05               |
+BM|[^][^][^][^][^][^][^][^][ ]|9
+   0        3                 |
+   P04               ---   P06P06
+BT|[=][=][=][=][=][=][ ][ ][=]   
+   0                 6     8  9
 
-fin dibujando CPU : 26ms
-Número de procesos ejecutados 2/5
-════════════════════════════════════════════════════════════════════════════
-El proceso P01 ha entrado en el sistema en el instante 8
-════════════════════════════════════════════════════════════════════════════
-
+Tiempo de espera medio: 0 || Tiempo de retorno medio: 2.33
+Número de procesos ejecutados: 1/7 
+═════════════════════════════════════════════════════════════════
+T: 10
+El proceso P07 ha entrado en el sistema en el instante 10
     │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │
 ┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤
  Ref TLl TEj Mem Pri Tesp Tret Trej DirI DirF Estado
- P05 0   3   5   -24 0    3    0    -    -    Terminado        
- P02 3   3   7   -26 0    6    0    -    -    Terminado        
- P03 3   10  7   -27 3    8    8    7    13   En Ejecución    
- P01 8   8   10  -27 0    -    -    -    -    En Espera        
- P04 13  8   10  -26 -    -    -    -    -    Fuera del Sistema
-└───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘
-Instante: 8 | P. más alta: -24 | P. más baja: -27 
-dibujando memoria : 129ms
-Uso de memoria: 7/14 (50.00%) -> Memoria libre: 7
-   ---                  P03                  
-BM|[_][_][_][_][_][_][_][^][^][^][^][^][^][^]
-   0                    7                    
-fin dibujando memoria : 31ms
-   P05      P02      P03      
-BT|[=][=][=][=][=][=][=][=]
-   0        3        6     8  
+ P04 0   6   5   -13 0    6    0    -    -    Terminado        
+ P06 8   3   3   -22 0    2    1    0    2    En Ejecución    
+ P05 9   9   5   -7  1    1    9    3    7    En Memoria       
+ P07 10  9   6   0   0    0    -    -    -    En Espera        
+ P03 11  5   3   -19 -    -    -    -    -    Fuera del Sistema
+─────────────────────────────────────────────────────────────────
+ P02 12  9   4   -4  -    -    -    -    -    Fuera del Sistema
+ P01 14  4   5   -12 -    -    -    -    -    Fuera del Sistema
+P. más alta: 14 | P. más baja: -25 
+Uso de memoria: 8/9 (88.88%) -> Memoria libre: 1
+   P06      P05               |
+BM|[^][^][^][^][^][^][^][^][ ]|9
+   0        3                 |
+   P04               ---   P06   P06
+BT|[=][=][=][=][=][=][ ][ ][=][=]   
+   0                 6     8     10
 
-fin dibujando CPU : 29ms
-Número de procesos ejecutados 2/5
-════════════════════════════════════════════════════════════════════════════
-El proceso P04 ha entrado en el sistema en el instante 13
-════════════════════════════════════════════════════════════════════════════
-
+Tiempo de espera medio: .25 || Tiempo de retorno medio: 2.25
+Número de procesos ejecutados: 1/7 
+═════════════════════════════════════════════════════════════════
+T: 11
+El proceso P06 ha terminado de ejecutarse en el instante 11 y está siendo desalojado de memoria y CPU
+El proceso P03 ha entrado en el sistema en el instante 11
+El proceso P05 ha sido introducido en la CPU en el instante 11 y ahora se está ejecutando
     │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │
 ┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤
  Ref TLl TEj Mem Pri Tesp Tret Trej DirI DirF Estado
- P05 0   3   5   -24 0    3    0    -    -    Terminado        
- P02 3   3   7   -26 0    6    0    -    -    Terminado        
- P03 3   10  7   -27 3    13   3    7    13   En Ejecución    
- P01 8   8   10  -27 5    -    -    -    -    En Espera        
- P04 13  8   10  -26 0    -    -    -    -    En Espera        
-└───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘
-Instante: 13 | P. más alta: -24 | P. más baja: -27 
-dibujando memoria : 294ms
-Uso de memoria: 7/14 (50.00%) -> Memoria libre: 7
-   ---                  P03                  
-BM|[_][_][_][_][_][_][_][^][^][^][^][^][^][^]
-   0                    7                    
-fin dibujando memoria : 87ms
-   P05      P02      P03                     
-BT|[=][=][=][=][=][=][=][=][=][=][=][=][=]
-   0        3        6                    13 
+ P04 0   6   5   -13 0    6    0    -    -    Terminado        
+ P06 8   3   3   -22 0    3    0    -    -    Terminado        
+ P05 9   9   5   -7  2    2    9    3    7    En Ejecución    
+ P07 10  9   6   0   1    1    -    -    -    En Espera        
+ P03 11  5   3   -19 0    0    -    -    -    En Espera        
+─────────────────────────────────────────────────────────────────
+ P02 12  9   4   -4  -    -    -    -    -    Fuera del Sistema
+ P01 14  4   5   -12 -    -    -    -    -    Fuera del Sistema
+P. más alta: 14 | P. más baja: -25 
+Uso de memoria: 5/9 (55.55%) -> Memoria libre: 4
+   ---      P05               |
+BM|[ ][ ][ ][^][^][^][^][^][ ]|9
+   0        3                 |
+   P04               ---   P06      P05
+BT|[=][=][=][=][=][=][ ][ ][=][=][=]   
+   0                 6     8        11
 
-fin dibujando CPU : 36ms
-Número de procesos ejecutados 2/5
-════════════════════════════════════════════════════════════════════════════
-El proceso P03 ha terminado de ejecutarse en el instante 16 y está siendo desalojado de memoria y CPU
-El proceso P01 ha sido introducido en memoria en el instante 16
-El proceso P01 ha sido introducido en la CPU en el instante 16 y ahora se está ejecutando
-════════════════════════════════════════════════════════════════════════════
-
+Tiempo de espera medio: .60 || Tiempo de retorno medio: 2.40
+Número de procesos ejecutados: 2/7 
+═════════════════════════════════════════════════════════════════
+T: 12
+El proceso P02 ha entrado en el sistema en el instante 12
     │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │
 ┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤
  Ref TLl TEj Mem Pri Tesp Tret Trej DirI DirF Estado
- P05 0   3   5   -24 0    3    0    -    -    Terminado        
- P02 3   3   7   -26 0    6    0    -    -    Terminado        
- P03 3   10  7   -27 3    16   0    -    -    Terminado        
- P01 8   8   10  -27 8    8    8    0    9    En Ejecución    
- P04 13  8   10  -26 3    -    -    -    -    En Espera        
-└───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘
-Instante: 16 | P. más alta: -24 | P. más baja: -27 
-dibujando memoria : 30ms
-Uso de memoria: 10/14 (71.42%) -> Memoria libre: 4
-   P01                           ---         
-BM|[^][^][^][^][^][^][^][^][^][^][_][_][_][_]
-   0                             10          
-fin dibujando memoria : 31ms
-   P05      P02      P03                              
-BT|[=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=]
-   0        3        6                             16 
+ P04 0   6   5   -13 0    6    0    -    -    Terminado        
+ P06 8   3   3   -22 0    3    0    -    -    Terminado        
+ P05 9   9   5   -7  2    3    8    3    7    En Ejecución    
+ P07 10  9   6   0   2    2    -    -    -    En Espera        
+ P03 11  5   3   -19 1    1    -    -    -    En Espera        
+─────────────────────────────────────────────────────────────────
+ P02 12  9   4   -4  0    0    -    -    -    En Espera        
+ P01 14  4   5   -12 -    -    -    -    -    Fuera del Sistema
+P. más alta: 14 | P. más baja: -25 
+Uso de memoria: 5/9 (55.55%) -> Memoria libre: 4
+   ---      P05               |
+BM|[ ][ ][ ][^][^][^][^][^][ ]|9
+   0        3                 |
+   P04               ---   P06      P05P05
+BT|[=][=][=][=][=][=][ ][ ][=][=][=][=]   
+   0                 6     8        11 12
 
-fin dibujando CPU : 29ms
-Número de procesos ejecutados 3/5
-════════════════════════════════════════════════════════════════════════════
-El proceso P01 ha terminado de ejecutarse en el instante 24 y está siendo desalojado de memoria y CPU
-El proceso P04 ha sido introducido en memoria en el instante 24
-El proceso P04 ha sido introducido en la CPU en el instante 24 y ahora se está ejecutando
-════════════════════════════════════════════════════════════════════════════
-
+Tiempo de espera medio: .83 || Tiempo de retorno medio: 2.50
+Número de procesos ejecutados: 2/7 
+═════════════════════════════════════════════════════════════════
+T: 14
+El proceso P01 ha entrado en el sistema en el instante 14
     │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │
 ┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤
  Ref TLl TEj Mem Pri Tesp Tret Trej DirI DirF Estado
- P05 0   3   5   -24 0    3    0    -    -    Terminado        
- P02 3   3   7   -26 0    6    0    -    -    Terminado        
- P03 3   10  7   -27 3    16   0    -    -    Terminado        
- P01 8   8   10  -27 8    24   0    -    -    Terminado        
- P04 13  8   10  -26 11   11   8    0    9    En Ejecución    
-└───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘
-Instante: 24 | P. más alta: -24 | P. más baja: -27 
-dibujando memoria : 408ms
-Uso de memoria: 10/14 (71.42%) -> Memoria libre: 4
-   P04                           ---         
-BM|[^][^][^][^][^][^][^][^][^][^][_][_][_][_]
-   0                             10          
-fin dibujando memoria : 28ms
-   P05      P02      P03                           P01                        
-BT|[=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=]
-   0        3        6                             16                      24 
+ P04 0   6   5   -13 0    6    0    -    -    Terminado        
+ P06 8   3   3   -22 0    3    0    -    -    Terminado        
+ P05 9   9   5   -7  2    5    6    3    7    En Ejecución    
+ P07 10  9   6   0   4    4    -    -    -    En Espera        
+ P03 11  5   3   -19 3    3    -    -    -    En Espera        
+─────────────────────────────────────────────────────────────────
+ P02 12  9   4   -4  2    2    -    -    -    En Espera        
+ P01 14  4   5   -12 0    0    -    -    -    En Espera        
+P. más alta: 14 | P. más baja: -25 
+Uso de memoria: 5/9 (55.55%) -> Memoria libre: 4
+   ---      P05               |
+BM|[ ][ ][ ][^][^][^][^][^][ ]|9
+   0        3                 |
+   P04               ---   P06      P05      P05
+BT|[=][=][=][=][=][=][ ][ ][=][=][=][=][=][=]   
+   0                 6     8        11       14
 
-fin dibujando CPU : 28ms
-Número de procesos ejecutados 4/5
-════════════════════════════════════════════════════════════════════════════
-El proceso P04 ha terminado de ejecutarse en el instante 32 y está siendo desalojado de memoria y CPU
-El último proceso ha sido desalojado con éxito de CPU y Memoria!
-════════════════════════════════════════════════════════════════════════════
-
+Tiempo de espera medio: 1.57 || Tiempo de retorno medio: 3.28
+Número de procesos ejecutados: 2/7 
+═════════════════════════════════════════════════════════════════
+T: 20
+El proceso P05 ha terminado de ejecutarse en el instante 20 y está siendo desalojado de memoria y CPU
+El proceso P07 ha sido introducido en memoria en el instante 20
+El proceso P03 ha sido introducido en memoria en el instante 20
+El proceso P07 ha sido introducido en la CPU en el instante 20 y ahora se está ejecutando
     │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │
 ┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤
  Ref TLl TEj Mem Pri Tesp Tret Trej DirI DirF Estado
- P05 0   3   5   -24 0    3    0    -    -    Terminado        
- P02 3   3   7   -26 0    6    0    -    -    Terminado        
- P03 3   10  7   -27 3    16   0    -    -    Terminado        
- P01 8   8   10  -27 8    24   0    -    -    Terminado        
- P04 13  8   10  -26 11   32   0    -    -    Terminado        
-└───┴───┴───┴───┴───┴────┴────┴────┴────┴────┴──────────────────┘
-════════════════════════════════════════════════════════════════════════════
-Tiempo de ejecución Total: 32
-Prioridad más alta: -24
-Prioridad más baja: -27
-Tiempo de ejecución medio: 6.40
-Tiempo de espera medio: 4.40
-Tiempo de retorno medio: 16.20
-   ---                                       
-BM|[_][_][_][_][_][_][_][_][_][_][_][_][_][_]
-   0                                         
-   P05      P02      P03                           P01                     P04                        
-BT|[=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=]
-   0        3        6                             16                      24                      32 
+ P04 0   6   5   -13 0    6    0    -    -    Terminado        
+ P06 8   3   3   -22 0    3    0    -    -    Terminado        
+ P05 9   9   5   -7  2    11   0    -    -    Terminado        
+ P07 10  9   6   0   10   10   9    0    5    En Ejecución    
+ P03 11  5   3   -19 9    9    5    6    8    En Memoria       
+─────────────────────────────────────────────────────────────────
+ P02 12  9   4   -4  8    8    -    -    -    En Espera        
+ P01 14  4   5   -12 6    6    -    -    -    En Espera        
+P. más alta: 14 | P. más baja: -25 
+Uso de memoria: 9/9 (100.00%) -> Memoria libre: 0
+   P07               P03      |
+BM|[^][^][^][^][^][^][^][^][^]|9
+   0                 6        |
+   P04               ---   P06      P05                        P07
+BT|[=][=][=][=][=][=][ ][ ][=][=][=][=][=][=][=][=][=][=][=][=]   
+   0                 6     8        11                         20
 
+Tiempo de espera medio: 5.00 || Tiempo de retorno medio: 7.57
+Número de procesos ejecutados: 3/7 
+═════════════════════════════════════════════════════════════════
+T: 29
+El proceso P07 ha terminado de ejecutarse en el instante 29 y está siendo desalojado de memoria y CPU
+El proceso P02 ha sido introducido en memoria en el instante 29
+El proceso P02 ha sido introducido en la CPU en el instante 29 y ahora se está ejecutando
+    │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │
+┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤
+ Ref TLl TEj Mem Pri Tesp Tret Trej DirI DirF Estado
+ P04 0   6   5   -13 0    6    0    -    -    Terminado        
+ P06 8   3   3   -22 0    3    0    -    -    Terminado        
+ P05 9   9   5   -7  2    11   0    -    -    Terminado        
+ P07 10  9   6   0   10   19   0    -    -    Terminado        
+ P03 11  5   3   -19 18   18   5    6    8    En Memoria       
+─────────────────────────────────────────────────────────────────
+ P02 12  9   4   -4  17   17   9    0    3    En Ejecución    
+ P01 14  4   5   -12 15   15   -    -    -    En Espera        
+P. más alta: 14 | P. más baja: -25 
+Uso de memoria: 7/9 (77.77%) -> Memoria libre: 2
+   P02         ---   P03      |
+BM|[^][^][^][^][ ][ ][^][^][^]|9
+   0           4     6        |
+   P04               ---   P06      P05                        P07   
+BT|[=][=][=][=][=][=][ ][ ][=][=][=][=][=][=][=][=][=][=][=][=][=][=]
+   0                 6     8        11                         20    
+   P07                  P02
+   [=][=][=][=][=][=][=]   
+   22                   29
+
+Tiempo de espera medio: 8.85 || Tiempo de retorno medio: 12.71
+Número de procesos ejecutados: 4/7 
+═════════════════════════════════════════════════════════════════
+T: 38
+El proceso P02 ha terminado de ejecutarse en el instante 38 y está siendo desalojado de memoria y CPU
+El proceso P01 ha sido introducido en memoria en el instante 38
+El proceso P01 ha sido introducido en la CPU en el instante 38 y ahora se está ejecutando
+    │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │
+┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤
+ Ref TLl TEj Mem Pri Tesp Tret Trej DirI DirF Estado
+ P04 0   6   5   -13 0    6    0    -    -    Terminado        
+ P06 8   3   3   -22 0    3    0    -    -    Terminado        
+ P05 9   9   5   -7  2    11   0    -    -    Terminado        
+ P07 10  9   6   0   10   19   0    -    -    Terminado        
+ P03 11  5   3   -19 27   27   5    6    8    En Memoria       
+─────────────────────────────────────────────────────────────────
+ P02 12  9   4   -4  17   26   0    -    -    Terminado        
+ P01 14  4   5   -12 24   24   4    0    4    En Ejecución    
+P. más alta: 14 | P. más baja: -25 
+Uso de memoria: 8/9 (88.88%) -> Memoria libre: 1
+   P01            ---P03      |
+BM|[^][^][^][^][^][ ][^][^][^]|9
+   0              5  6        |
+   P04               ---   P06      P05                        P07   
+BT|[=][=][=][=][=][=][ ][ ][=][=][=][=][=][=][=][=][=][=][=][=][=][=]
+   0                 6     8        11                         20    
+   P07                  P02                        P01
+   [=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=]   
+   22                   29                         38
+
+Tiempo de espera medio: 11.42 || Tiempo de retorno medio: 16.57
+Número de procesos ejecutados: 5/7 
+═════════════════════════════════════════════════════════════════
+T: 42
+El proceso P01 ha terminado de ejecutarse en el instante 42 y está siendo desalojado de memoria y CPU
+El proceso P03 ha sido introducido en la CPU en el instante 42 y ahora se está ejecutando
+    │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │
+┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤
+ Ref TLl TEj Mem Pri Tesp Tret Trej DirI DirF Estado
+ P04 0   6   5   -13 0    6    0    -    -    Terminado        
+ P06 8   3   3   -22 0    3    0    -    -    Terminado        
+ P05 9   9   5   -7  2    11   0    -    -    Terminado        
+ P07 10  9   6   0   10   19   0    -    -    Terminado        
+ P03 11  5   3   -19 31   31   5    6    8    En Ejecución    
+─────────────────────────────────────────────────────────────────
+ P02 12  9   4   -4  17   26   0    -    -    Terminado        
+ P01 14  4   5   -12 24   28   0    -    -    Terminado        
+P. más alta: 14 | P. más baja: -25 
+Uso de memoria: 3/9 (33.33%) -> Memoria libre: 6
+   ---               P03      |
+BM|[ ][ ][ ][ ][ ][ ][^][^][^]|9
+   0                 6        |
+   P04               ---   P06      P05                        P07   
+BT|[=][=][=][=][=][=][ ][ ][=][=][=][=][=][=][=][=][=][=][=][=][=][=]
+   0                 6     8        11                         20    
+   P07                  P02                        P01         P03
+   [=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=]   
+   22                   29                         38          42
+
+Tiempo de espera medio: 12.00 || Tiempo de retorno medio: 17.71
+Número de procesos ejecutados: 6/7 
+═════════════════════════════════════════════════════════════════
+T: 47
+    │ DAT.INICIALES │    TIEMPOS   │ MEMORIA │    OTROS DATOS   │
+┌───┼───┬───┬───┬───┼────┬────┬────┼────┬────┼──────────────────┤
+ Ref TLl TEj Mem Pri Tesp Tret Trej DirI DirF Estado
+ P04 0   6   5   -13 0    6    0    -    -    Terminado        
+ P06 8   3   3   -22 0    3    0    -    -    Terminado        
+ P05 9   9   5   -7  2    11   0    -    -    Terminado        
+ P07 10  9   6   0   10   19   0    -    -    Terminado        
+ P03 11  5   3   -19 31   36   0    -    -    Terminado        
+─────────────────────────────────────────────────────────────────
+ P02 12  9   4   -4  17   26   0    -    -    Terminado        
+ P01 14  4   5   -12 24   28   0    -    -    Terminado        
+═════════════════════════════════════════════════════════════════
+   ---                        |
+BM|[ ][ ][ ][ ][ ][ ][ ][ ][ ]|9
+   0                          |
+   P04               ---   P06      P05                        P07   
+BT|[=][=][=][=][=][=][ ][ ][=][=][=][=][=][=][=][=][=][=][=][=][=][=]
+   0                 6     8        11                         20    
+   P07                  P02                        P01         P03   
+   [=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=][=]
+   22                   29                         38          42    
+   P03      |
+   [=][=][=]|47
+   44       |
+
+
+Tiempo de espera medio: 12.00 || Tiempo de retorno medio: 18.42
+Tiempo de ejecución Total: 47 
+Prioridad más alta: 14 
+Prioridad más baja: -25 
 
 
 

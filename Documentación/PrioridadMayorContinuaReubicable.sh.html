@@ -5,7 +5,7 @@
 <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 1.5.5">
-<title>PrioridadMayorContinuaReubicable.sh(1)</title>
+<title>Prioridad Mayor - Según Necesidades - Continua - Reubicable</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
 /* Asciidoctor default stylesheet | MIT License | http://asciidoctor.org */
@@ -420,7 +420,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </head>
 <body class="article toc2 toc-left">
 <div id="header">
-<h1>PrioridadMayorContinuaReubicable.sh(1)</h1>
+<h1>Prioridad Mayor - Según Necesidades - Continua - Reubicable</h1>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
@@ -431,6 +431,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <ul class="sectlevel2">
 <li><a href="#_script_body">Script Body</a></li>
 <li><a href="#_dev_imprimircolores">DEV_ImprimirColores</a></li>
+<li><a href="#_dev_medirtiempos">DEV_medirTiempos</a></li>
 <li><a href="#_dev_modificarmemoria">DEV_modificarMemoria</a></li>
 <li><a href="#_abririnforme">abrirInforme</a></li>
 <li><a href="#_ajustarmemoriaparaelproceso">ajustarMemoriaParaElProceso</a></li>
@@ -443,7 +444,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_calcularposproceso">calcularPosProceso</a></li>
 <li><a href="#_calcularpostodosprocesos">calcularPosTodosProcesos</a></li>
 <li><a href="#_cargadatos">cargaDatos</a></li>
-<li><a href="#_colorearbarratiempo">colorearBarraTiempo</a></li>
+<li><a href="#_colorearbarracpu">colorearBarraCPU</a></li>
 <li><a href="#_comprobaciondirectorio">comprobacionDirectorio</a></li>
 <li><a href="#_comprobardatosfichero">comprobarDatosFichero</a></li>
 <li><a href="#_comprobarrango">comprobarRango</a></li>
@@ -460,11 +461,13 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_dibujarestadocpu">dibujarEstadoCPU</a></li>
 <li><a href="#_dibujarmemoria">dibujarMemoria</a></li>
 <li><a href="#_ejecucion">ejecucion</a></li>
+<li><a href="#_ejecucionapropiativo">ejecucionApropiativo</a></li>
 <li><a href="#_ejecutaruncilodecpu">ejecutarUnCiloDeCPU</a></li>
 <li><a href="#_eliminarcola">eliminarCola</a></li>
 <li><a href="#_eliminarposproceso">eliminarPosProceso</a></li>
 <li><a href="#_eliminarprocesodememoria">eliminarProcesoDeMemoria</a></li>
 <li><a href="#_encontrarhuecoenmemoria">encontrarHuecoEnMemoria</a></li>
+<li><a href="#_esentero">esEntero</a></li>
 <li><a href="#_escribedatos">escribeDatos</a></li>
 <li><a href="#_establecerprioridad">establecerPrioridad</a></li>
 <li><a href="#_finmain">finMain</a></li>
@@ -477,12 +480,13 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_imprimirlcyan">imprimirLCyan</a></li>
 <li><a href="#_imprimirtabla">imprimirTabla</a></li>
 <li><a href="#_imprimirtablapredeterminada">imprimirTablaPredeterminada</a></li>
+<li><a href="#_imprimirtiemposmedios">imprimirTiemposMedios</a></li>
 <li><a href="#_inicializararrays">inicializarArrays</a></li>
 <li><a href="#_main">main</a></li>
-<li><a href="#_medirtiempo">medirTiempo</a></li>
 <li><a href="#_menualgoritmo">menuAlgoritmo</a></li>
 <li><a href="#_nularcolumna">nularColumna</a></li>
 <li><a href="#_numaleatorio">numAleatorio</a></li>
+<li><a href="#_obtenerprocesoconmayorprioridad">obtenerProcesoConMayorPrioridad</a></li>
 <li><a href="#_ordenarprocesos">ordenarProcesos</a></li>
 <li><a href="#_renombrardatosentrada">renombrarDatosEntrada</a></li>
 <li><a href="#_reubicarprocesos">reubicarProcesos</a></li>
@@ -504,25 +508,35 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div class="sect1">
 <h2 id="_alumno">ALUMNO</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Jorge Ruiz Gómez</p>
+<div class="literalblock">
+<div class="content">
+<pre>Jorge Ruiz Gómez
+⠀
+Sistemas Operativos
+⠀
+Curso 2019-2020</pre>
 </div>
-<div class="paragraph">
-<p>Sistemas Operativos</p>
-</div>
-<div class="paragraph">
-<p>2019-2020</p>
 </div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="_información">INFORMACIÓN</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>Script que simula el comportamiento de un algoritmo</p>
+<div class="literalblock">
+<div class="content">
+<pre>Script programado para la asignatura Sistemas Operativos
+⠀
+Permite simular el comportamiento de un algoritmo de gestión de memoria y procesos.
+Algoritmo de gestión de memoria:
+    &gt;Primero en llegar al Sistema
+    Memoria Según Necesidades
+        Distribución de la memoria: Contínua
+        Gestión de la memoria: Reubicable
+⠀
+Algoritmo de gestión de procesos:
+    &gt;Prioridades
+    Tienen prioridad los que tengan la prioridad más alta (y si son iguales, el algoritmo que  haya lleado más pronto al sistema entra en CPU)</pre>
 </div>
-<div class="paragraph">
-<p>Prioridad Mayor - Memoria Contínua Reubicable</p>
 </div>
 </div>
 </div>
@@ -532,6 +546,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div class="literalblock">
 <div class="content">
 <pre>DEV_ImprimirColores
+DEV_medirTiempos
 DEV_modificarMemoria
 abrirInforme
 ajustarMemoriaParaElProceso
@@ -544,7 +559,7 @@ breakpoint
 calcularPosProceso
 calcularPosTodosProcesos
 cargaDatos
-colorearBarraTiempo
+colorearBarraCPU
 comprobacionDirectorio
 comprobarDatosFichero
 comprobarRango
@@ -561,11 +576,13 @@ deleteGeneratedFiles
 dibujarEstadoCPU
 dibujarMemoria
 ejecucion
+ejecucionApropiativo
 ejecutarUnCiloDeCPU
 eliminarCola
 eliminarPosProceso
 eliminarProcesoDeMemoria
 encontrarHuecoEnMemoria
+esEntero
 escribeDatos
 establecerPrioridad
 finMain
@@ -578,12 +595,13 @@ imprimirErrorCritico
 imprimirLCyan
 imprimirTabla
 imprimirTablaPredeterminada
+imprimirTiemposMedios
 inicializarArrays
 main
-medirTiempo
 menuAlgoritmo
 nularColumna
 numAleatorio
+obtenerProcesoConMayorPrioridad
 ordenarProcesos
 renombrarDatosEntrada
 reubicarProcesos
@@ -606,7 +624,7 @@ vaciarMemoria</pre>
 <div class="sect2">
 <h3 id="_script_body">Script Body</h3>
 <div class="paragraph">
-<p>Has 7 line(s). Calls functions:</p>
+<p>Has 8 line(s). Calls functions:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -686,6 +704,7 @@ vaciarMemoria</pre>
         |   |-- establecerPrioridad
         |   |-- fin_programa
         |   |   `-- imprimirLCyan
+        |   |-- imprimirLCyan
         |   |-- menuAlgoritmo
         |   |   |-- imprimirLCyan
         |   |   `-- scanfNumMinMax
@@ -726,24 +745,32 @@ vaciarMemoria</pre>
         |   |       |   `-- imprimirErrorCritico
         |   |       `-- imprimirErrorCritico
         |   |-- aniadirSiguienteProcesoACPU
-        |   |   `-- breakpoint
+        |   |   `-- obtenerProcesoConMayorPrioridad
+        |   |       `-- breakpoint
         |   |-- calcularPosTodosProcesos
         |   |-- comprobarSiElProcesoEnCPUHaTerminado
         |   |   |-- eliminarPosProceso
         |   |   `-- eliminarProcesoDeMemoria
         |   |-- dibujarEstadoCPU
         |   |   `-- truncarBarraCPU
-        |   |       `-- colorearBarraTiempo
+        |   |       `-- colorearBarraCPU
         |   |-- dibujarMemoria
         |   |   |-- imprimirLCyan
         |   |   `-- truncarMemoria
+        |   |-- ejecucionApropiativo
+        |   |   |-- imprimirAviso
+        |   |   `-- obtenerProcesoConMayorPrioridad
+        |   |       `-- breakpoint
         |   |-- ejecutarUnCiloDeCPU
         |   |-- imprimirLCyan
         |   |-- imprimirTablaPredeterminada
         |   |   `-- imprimirTabla
+        |   |-- imprimirTiemposMedios
+        |   |   `-- imprimirLCyan
         |   `-- vaciarMemoria
         |-- escribeDatos
         |   `-- ordenarProcesos
+        |-- imprimirCabecera
         |-- imprimirLCyan
         |-- imprimirTabla
         |-- inicializarArrays
@@ -776,13 +803,22 @@ vaciarMemoria</pre>
 </div>
 </div>
 <div class="sect2">
+<h3 id="_dev_medirtiempos">DEV_medirTiempos</h3>
+<div class="paragraph">
+<p>Has 4 line(s). Doesn&#8217;t call other functions.</p>
+</div>
+<div class="paragraph">
+<p>Not called by script or any function (may be e.g. command_not_found_handle or called indirectly in other way).</p>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_dev_modificarmemoria">DEV_modificarMemoria</h3>
 <div class="quoteblock">
 <blockquote>
 <div class="literalblock">
 <div class="content">
 <pre># Nombre: DEV_modificarMemoria
-# Date: 27/01/2020
+# Date: 27/02/2020
 # Descripción: Función que permite manipular la memoria de forma manual. Diseñada para testear el comportamiento de esta.</pre>
 </div>
 </div>
@@ -818,7 +854,8 @@ vaciarMemoria</pre>
 |       |   `-- imprimirErrorCritico
 |       `-- imprimirErrorCritico
 |-- aniadirSiguienteProcesoACPU
-|   `-- breakpoint
+|   `-- obtenerProcesoConMayorPrioridad
+|       `-- breakpoint
 |-- eliminarProcesoDeMemoria
 |-- imprimirAviso
 |-- reubicarProcesos
@@ -850,7 +887,7 @@ vaciarMemoria</pre>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 35 line(s). Calls functions:</p>
+<p>Has 43 line(s). Calls functions:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -881,8 +918,7 @@ vaciarMemoria</pre>
 # Date: 22/02/2020
 # @param $1: Tamaño del proceso
 # @param $2/return: Variable en la que se almacenará el valor de salida de esta función
-# @return posición en la que empieza el huevo ó null si no hay suficiente hueco.
-# 	return por stdout, es necesario = la llamada de la función a una variable para "capturar" el return.</pre>
+# @return posición en la que empieza el hueco ó null si no hay suficiente hueco.</pre>
 </div>
 </div>
 </blockquote>
@@ -1011,12 +1047,13 @@ ejecucion</pre>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 34 line(s). Calls functions:</p>
+<p>Has 6 line(s). Calls functions:</p>
 </div>
 <div class="literalblock">
 <div class="content">
 <pre>aniadirSiguienteProcesoACPU
-`-- breakpoint</pre>
+`-- obtenerProcesoConMayorPrioridad
+    `-- breakpoint</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1109,6 +1146,7 @@ datosFichero</pre>
 # Date: 21/02/2020
 # Descripción: Permite realizar una parada del programa en cualquier punto del código hasta que no se realizar una entrada por teclado.
 # Uso: Activar o desactivar la variable global $BREAKPOINT_ENABLED para activar o desactivar los breakpoints.
+# Nota: En algunos puntos del programa, si ocurre un fallo específico, se lanza un breakpoint, fueron usados durante el desarrollo.
 # Globales: BREAKPOINT_ENABLED
 # @param $@: Imprime todos los stings pasados como argumento, por si se quieren visualizar variables.</pre>
 </div>
@@ -1127,7 +1165,7 @@ datosFichero</pre>
 <div class="literalblock">
 <div class="content">
 <pre>aniadirProcesoAMemoria
-aniadirSiguienteProcesoACPU
+obtenerProcesoConMayorPrioridad
 reubicarProcesos</pre>
 </div>
 </div>
@@ -1196,7 +1234,7 @@ reubicarProcesos</pre>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 38 line(s). Calls functions:</p>
+<p>Has 39 line(s). Calls functions:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -1255,6 +1293,7 @@ reubicarProcesos</pre>
 |-- establecerPrioridad
 |-- fin_programa
 |   `-- imprimirLCyan
+|-- imprimirLCyan
 |-- menuAlgoritmo
 |   |-- imprimirLCyan
 |   `-- scanfNumMinMax
@@ -1282,9 +1321,20 @@ main</pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_colorearbarratiempo">colorearBarraTiempo</h3>
+<h3 id="_colorearbarracpu">colorearBarraCPU</h3>
+<div class="quoteblock">
+<blockquote>
+<div class="literalblock">
+<div class="content">
+<pre># Nombre: colorearBarraCPU
+# Descripción: Rellena el array barraTiempoColor[] con la barra de tiempo coloreada, donde cada posición es un proceso en una unidad de tiempo.
+# Date: 09/03/2020</pre>
+</div>
+</div>
+</blockquote>
+</div>
 <div class="paragraph">
-<p>Has 13 line(s). Doesn&#8217;t call other functions.</p>
+<p>Has 16 line(s). Doesn&#8217;t call other functions.</p>
 </div>
 <div class="paragraph">
 <p>Called by:</p>
@@ -1611,13 +1661,14 @@ main</pre>
 <div class="literalblock">
 <div class="content">
 <pre># Nombre: datosFichero
-# Descripcion: Opción 2: Por datos. Recoge todos los datos a través del fichero</pre>
+# Descripcion: Opción 2: Por datos. Recoge todos los datos a través del fichero
+# Date: 24/03/2020 Actualización: Añadida memoria + apropiativo</pre>
 </div>
 </div>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 39 line(s). Calls functions:</p>
+<p>Has 44 line(s). Calls functions:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -1649,6 +1700,7 @@ main</pre>
 |   |-- establecerPrioridad
 |   |-- fin_programa
 |   |   `-- imprimirLCyan
+|   |-- imprimirLCyan
 |   |-- menuAlgoritmo
 |   |   |-- imprimirLCyan
 |   |   `-- scanfNumMinMax
@@ -1813,7 +1865,7 @@ main</pre>
 <div class="content">
 <pre>dibujarEstadoCPU
 `-- truncarBarraCPU
-    `-- colorearBarraTiempo</pre>
+    `-- colorearBarraCPU</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1872,7 +1924,7 @@ ejecucion</pre>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 94 line(s). Calls functions:</p>
+<p>Has 89 line(s). Calls functions:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -1902,21 +1954,28 @@ ejecucion</pre>
 |       |   `-- imprimirErrorCritico
 |       `-- imprimirErrorCritico
 |-- aniadirSiguienteProcesoACPU
-|   `-- breakpoint
+|   `-- obtenerProcesoConMayorPrioridad
+|       `-- breakpoint
 |-- calcularPosTodosProcesos
 |-- comprobarSiElProcesoEnCPUHaTerminado
 |   |-- eliminarPosProceso
 |   `-- eliminarProcesoDeMemoria
 |-- dibujarEstadoCPU
 |   `-- truncarBarraCPU
-|       `-- colorearBarraTiempo
+|       `-- colorearBarraCPU
 |-- dibujarMemoria
 |   |-- imprimirLCyan
 |   `-- truncarMemoria
+|-- ejecucionApropiativo
+|   |-- imprimirAviso
+|   `-- obtenerProcesoConMayorPrioridad
+|       `-- breakpoint
 |-- ejecutarUnCiloDeCPU
 |-- imprimirLCyan
 |-- imprimirTablaPredeterminada
 |   `-- imprimirTabla
+|-- imprimirTiemposMedios
+|   `-- imprimirLCyan
 `-- vaciarMemoria</pre>
 </div>
 </div>
@@ -1929,6 +1988,39 @@ ejecucion</pre>
 <div class="literalblock">
 <div class="content">
 <pre>main</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_ejecucionapropiativo">ejecucionApropiativo</h3>
+<div class="quoteblock">
+<blockquote>
+<div class="literalblock">
+<div class="content">
+<pre># Nombre: ejecucionApropiativo
+# Descripción: Realiza los cambios en CPU de los procesos si el modo apropiativo está activado ($opcionApropiativo = s)
+# Date: 23/03/2020</pre>
+</div>
+</div>
+</blockquote>
+</div>
+<div class="paragraph">
+<p>Has 21 line(s). Calls functions:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>ejecucionApropiativo
+|-- imprimirAviso
+`-- obtenerProcesoConMayorPrioridad
+    `-- breakpoint</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Called by:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>ejecucion</pre>
 </div>
 </div>
 </div>
@@ -1949,7 +2041,7 @@ ejecucion</pre>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 11 line(s). Doesn&#8217;t call other functions.</p>
+<p>Has 18 line(s). Doesn&#8217;t call other functions.</p>
 </div>
 <div class="paragraph">
 <p>Called by:</p>
@@ -2072,6 +2164,27 @@ comprobarSiElProcesoEnCPUHaTerminado</pre>
 </div>
 </div>
 <div class="sect2">
+<h3 id="_esentero">esEntero</h3>
+<div class="quoteblock">
+<blockquote>
+<div class="literalblock">
+<div class="content">
+<pre># Nombre: esEntero
+# Descripción: Comprueba si el parámetro $1 es entero, y lanza un "true" al stdout
+# @param $1: Número a comprobar
+# return: "true o false" por un echo, hay que capturalo</pre>
+</div>
+</div>
+</blockquote>
+</div>
+<div class="paragraph">
+<p>Has 5 line(s). Doesn&#8217;t call other functions.</p>
+</div>
+<div class="paragraph">
+<p>Not called by script or any function (may be e.g. command_not_found_handle or called indirectly in other way).</p>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_escribedatos">escribeDatos</h3>
 <div class="quoteblock">
 <blockquote>
@@ -2084,7 +2197,7 @@ comprobarSiElProcesoEnCPUHaTerminado</pre>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 36 line(s). Calls functions:</p>
+<p>Has 35 line(s). Calls functions:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -2188,6 +2301,9 @@ datosFichero</pre>
 </div>
 </div>
 <div class="paragraph">
+<p>Uses feature(s): <em>kill</em></p>
+</div>
+<div class="paragraph">
 <p>Called by:</p>
 </div>
 <div class="literalblock">
@@ -2253,7 +2369,7 @@ forzarCierre</pre>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 118 line(s). Calls functions:</p>
+<p>Has 114 line(s). Calls functions:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -2323,6 +2439,7 @@ forzarCierre</pre>
     |   |-- establecerPrioridad
     |   |-- fin_programa
     |   |   `-- imprimirLCyan
+    |   |-- imprimirLCyan
     |   |-- menuAlgoritmo
     |   |   |-- imprimirLCyan
     |   |   `-- scanfNumMinMax
@@ -2363,24 +2480,32 @@ forzarCierre</pre>
     |   |       |   `-- imprimirErrorCritico
     |   |       `-- imprimirErrorCritico
     |   |-- aniadirSiguienteProcesoACPU
-    |   |   `-- breakpoint
+    |   |   `-- obtenerProcesoConMayorPrioridad
+    |   |       `-- breakpoint
     |   |-- calcularPosTodosProcesos
     |   |-- comprobarSiElProcesoEnCPUHaTerminado
     |   |   |-- eliminarPosProceso
     |   |   `-- eliminarProcesoDeMemoria
     |   |-- dibujarEstadoCPU
     |   |   `-- truncarBarraCPU
-    |   |       `-- colorearBarraTiempo
+    |   |       `-- colorearBarraCPU
     |   |-- dibujarMemoria
     |   |   |-- imprimirLCyan
     |   |   `-- truncarMemoria
+    |   |-- ejecucionApropiativo
+    |   |   |-- imprimirAviso
+    |   |   `-- obtenerProcesoConMayorPrioridad
+    |   |       `-- breakpoint
     |   |-- ejecutarUnCiloDeCPU
     |   |-- imprimirLCyan
     |   |-- imprimirTablaPredeterminada
     |   |   `-- imprimirTabla
+    |   |-- imprimirTiemposMedios
+    |   |   `-- imprimirLCyan
     |   `-- vaciarMemoria
     |-- escribeDatos
     |   `-- ordenarProcesos
+    |-- imprimirCabecera
     |-- imprimirLCyan
     |-- imprimirTabla
     |-- inicializarArrays
@@ -2422,6 +2547,7 @@ forzarCierre</pre>
 <pre>DEV_modificarMemoria
 ajustarMemoriaParaElProceso
 datosFichero
+ejecucionApropiativo
 scanfNum
 scanfNumMinMax
 scanfSiNo
@@ -2446,7 +2572,12 @@ scanfString</pre>
 <p>Has 26 line(s). Doesn&#8217;t call other functions.</p>
 </div>
 <div class="paragraph">
-<p>Not called by script or any function (may be e.g. command_not_found_handle or called indirectly in other way).</p>
+<p>Called by:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>main</pre>
+</div>
 </div>
 </div>
 <div class="sect2">
@@ -2500,11 +2631,13 @@ salirPorErrorCritico</pre>
 <div class="literalblock">
 <div class="content">
 <pre>abrirInforme
+cargaDatos
 comprobacionDirectorio
 datosFichero
 dibujarMemoria
 ejecucion
 fin_programa
+imprimirTiemposMedios
 main
 menuAlgoritmo
 scanfNum
@@ -2523,7 +2656,7 @@ selectorFichero</pre>
 <div class="content">
 <pre># Nombre: imprimirTabla
 # Descripcion: imprime las columnas del array procesos pasado como parámetro
-# Versión 2.0 (Original imprimirTablaOld())
+# Versión 2.0
 # Date: 6/03/2020
 # Nota 2020: Adaptada a los requisitos exigidos en el curso 18-19 y 19-20 (Tabla compacta roñosa)
 # @param $@ (todos): índice de las columnas que se quiere imprimir en pantalla</pre>
@@ -2532,7 +2665,7 @@ selectorFichero</pre>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 23 line(s). Doesn&#8217;t call other functions.</p>
+<p>Has 25 line(s). Doesn&#8217;t call other functions.</p>
 </div>
 <div class="paragraph">
 <p>Called by:</p>
@@ -2564,12 +2697,42 @@ main</pre>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 5 line(s). Calls functions:</p>
+<p>Has 3 line(s). Calls functions:</p>
 </div>
 <div class="literalblock">
 <div class="content">
 <pre>imprimirTablaPredeterminada
 `-- imprimirTabla</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Called by:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>ejecucion</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_imprimirtiemposmedios">imprimirTiemposMedios</h3>
+<div class="quoteblock">
+<blockquote>
+<div class="literalblock">
+<div class="content">
+<pre># Nombre: imprimirTiemposMedios
+# Descripción: Imprime los tiempos medios del sistema.</pre>
+</div>
+</div>
+</blockquote>
+</div>
+<div class="paragraph">
+<p>Has 37 line(s). Calls functions:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>imprimirTiemposMedios
+`-- imprimirLCyan</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2611,13 +2774,15 @@ main</pre>
 <blockquote>
 <div class="literalblock">
 <div class="content">
-<pre>#main</pre>
+<pre># Nombre: main
+# Descripción: Main del programa
+# Se llama desde global para poder cargar todas las variables globales</pre>
 </div>
 </div>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 27 line(s). Calls functions:</p>
+<p>Has 24 line(s). Calls functions:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -2677,6 +2842,7 @@ main</pre>
 |   |-- establecerPrioridad
 |   |-- fin_programa
 |   |   `-- imprimirLCyan
+|   |-- imprimirLCyan
 |   |-- menuAlgoritmo
 |   |   |-- imprimirLCyan
 |   |   `-- scanfNumMinMax
@@ -2717,24 +2883,32 @@ main</pre>
 |   |       |   `-- imprimirErrorCritico
 |   |       `-- imprimirErrorCritico
 |   |-- aniadirSiguienteProcesoACPU
-|   |   `-- breakpoint
+|   |   `-- obtenerProcesoConMayorPrioridad
+|   |       `-- breakpoint
 |   |-- calcularPosTodosProcesos
 |   |-- comprobarSiElProcesoEnCPUHaTerminado
 |   |   |-- eliminarPosProceso
 |   |   `-- eliminarProcesoDeMemoria
 |   |-- dibujarEstadoCPU
 |   |   `-- truncarBarraCPU
-|   |       `-- colorearBarraTiempo
+|   |       `-- colorearBarraCPU
 |   |-- dibujarMemoria
 |   |   |-- imprimirLCyan
 |   |   `-- truncarMemoria
+|   |-- ejecucionApropiativo
+|   |   |-- imprimirAviso
+|   |   `-- obtenerProcesoConMayorPrioridad
+|   |       `-- breakpoint
 |   |-- ejecutarUnCiloDeCPU
 |   |-- imprimirLCyan
 |   |-- imprimirTablaPredeterminada
 |   |   `-- imprimirTabla
+|   |-- imprimirTiemposMedios
+|   |   `-- imprimirLCyan
 |   `-- vaciarMemoria
 |-- escribeDatos
 |   `-- ordenarProcesos
+|-- imprimirCabecera
 |-- imprimirLCyan
 |-- imprimirTabla
 |-- inicializarArrays
@@ -2755,15 +2929,6 @@ main</pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_medirtiempo">medirTiempo</h3>
-<div class="paragraph">
-<p>Has 4 line(s). Doesn&#8217;t call other functions.</p>
-</div>
-<div class="paragraph">
-<p>Not called by script or any function (may be e.g. command_not_found_handle or called indirectly in other way).</p>
-</div>
-</div>
-<div class="sect2">
 <h3 id="_menualgoritmo">menuAlgoritmo</h3>
 <div class="quoteblock">
 <blockquote>
@@ -2776,7 +2941,7 @@ main</pre>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 44 line(s). Calls functions:</p>
+<p>Has 37 line(s). Calls functions:</p>
 </div>
 <div class="literalblock">
 <div class="content">
@@ -2857,6 +3022,43 @@ main</pre>
 </div>
 </div>
 <div class="sect2">
+<h3 id="_obtenerprocesoconmayorprioridad">obtenerProcesoConMayorPrioridad</h3>
+<div class="quoteblock">
+<blockquote>
+<div class="literalblock">
+<div class="content">
+<pre># Nombre: obtenerProcesoConMayorPrioridad
+# Descripción: De entre todos los procesos qeu están en memoria, selecciona el proceso con la prioridad más alta.
+# Nota: De entre dos procesosos con la misma prioridad, entra el que haya llegado antes a memoria.
+# Date: 23/03/2020
+# @Param $1: [return] Variable en la que almacenar el índice del proceso</pre>
+</div>
+</div>
+</blockquote>
+</div>
+<div class="paragraph">
+<p>Has 31 line(s). Calls functions:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>obtenerProcesoConMayorPrioridad
+`-- breakpoint</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Uses feature(s): <em>eval</em></p>
+</div>
+<div class="paragraph">
+<p>Called by:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>aniadirSiguienteProcesoACPU
+ejecucionApropiativo</pre>
+</div>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_ordenarprocesos">ordenarProcesos</h3>
 <div class="quoteblock">
 <blockquote>
@@ -2930,7 +3132,7 @@ main</pre>
 <div class="literalblock">
 <div class="content">
 <pre># Nombre: reubicarProcesos
-# date: 22/03/2020
+# date: 22/02/2020
 # Descripción: Reubica la memoria
 # Nota del autor: Si no hubiese hecho el array bidimensional, esto podría haber sído un simple oneLiner que ordenase el array de menor a mayor
 # 	(No he tenido en cuenta donde irían los nulls, pero podrían haber sido sustiutidos por 0 )
@@ -2968,9 +3170,7 @@ ajustarMemoriaParaElProceso</pre>
 <pre># Nombre: salirPorErroCritico
 # Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras y para la ejecucion.
 # @param $1: texto de aviso
-# Date 21/02/2020
-#//@see  ErrorCritio
-#//@see  forzarCierre</pre>
+# Date 21/02/2020</pre>
 </div>
 </div>
 </blockquote>
@@ -3220,12 +3420,12 @@ datosFichero</pre>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 40 line(s). Calls functions:</p>
+<p>Has 53 line(s). Calls functions:</p>
 </div>
 <div class="literalblock">
 <div class="content">
 <pre>truncarBarraCPU
-`-- colorearBarraTiempo</pre>
+`-- colorearBarraCPU</pre>
 </div>
 </div>
 <div class="paragraph">
@@ -3253,7 +3453,7 @@ datosFichero</pre>
 </blockquote>
 </div>
 <div class="paragraph">
-<p>Has 37 line(s). Doesn&#8217;t call other functions.</p>
+<p>Has 43 line(s). Doesn&#8217;t call other functions.</p>
 </div>
 <div class="paragraph">
 <p>Called by:</p>
@@ -3295,7 +3495,7 @@ reubicarProcesos</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2020-03-22 20:36:09 STD
+Last updated 2020-04-03 18:22:20 DST
 </div>
 </div>
 </body>

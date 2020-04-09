@@ -1,0 +1,10 @@
+Tamaño Memoria:13
+Apropiativo:n
+Prioridad Mínima:-8
+Prioridad Máxima:-13
+T.Lleg	T.Ejec	Prior	Tamaño
+13	6	-8	9	
+9	7	-12	4	
+14	5	-11	13	
+2	10	-13	5	
+13	2	-9	2	

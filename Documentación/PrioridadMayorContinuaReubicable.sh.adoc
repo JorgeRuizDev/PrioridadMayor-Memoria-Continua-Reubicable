@@ -1,27 +1,37 @@
-PrioridadMayorContinuaReubicable.sh(1)
-======================================
+Prioridad Mayor - Según Necesidades - Continua - Reubicable
+===========================================================
 :compat-mode!:
 :toc: left
 
 ALUMNO
 ------
-Jorge Ruiz Gómez
-
-Sistemas Operativos
-
-2019-2020
+ Jorge Ruiz Gómez
+ ⠀
+ Sistemas Operativos
+ ⠀
+ Curso 2019-2020
 
 INFORMACIÓN
 -----------
-Script que simula el comportamiento de un algoritmo
-
-Prioridad Mayor - Memoria Contínua Reubicable
+ Script programado para la asignatura Sistemas Operativos
+ ⠀
+ Permite simular el comportamiento de un algoritmo de gestión de memoria y procesos.
+ Algoritmo de gestión de memoria:
+     >Primero en llegar al Sistema
+     Memoria Según Necesidades
+         Distribución de la memoria: Contínua
+         Gestión de la memoria: Reubicable
+ ⠀
+ Algoritmo de gestión de procesos:
+     >Prioridades
+     Tienen prioridad los que tengan la prioridad más alta (y si son iguales, el algoritmo que  haya lleado más pronto al sistema entra en CPU)
 
 
 FUNCTIONS
 ---------
 
  DEV_ImprimirColores
+ DEV_medirTiempos
  DEV_modificarMemoria
  abrirInforme
  ajustarMemoriaParaElProceso
@@ -34,7 +44,7 @@ FUNCTIONS
  calcularPosProceso
  calcularPosTodosProcesos
  cargaDatos
- colorearBarraTiempo
+ colorearBarraCPU
  comprobacionDirectorio
  comprobarDatosFichero
  comprobarRango
@@ -51,11 +61,13 @@ FUNCTIONS
  dibujarEstadoCPU
  dibujarMemoria
  ejecucion
+ ejecucionApropiativo
  ejecutarUnCiloDeCPU
  eliminarCola
  eliminarPosProceso
  eliminarProcesoDeMemoria
  encontrarHuecoEnMemoria
+ esEntero
  escribeDatos
  establecerPrioridad
  finMain
@@ -68,12 +80,13 @@ FUNCTIONS
  imprimirLCyan
  imprimirTabla
  imprimirTablaPredeterminada
+ imprimirTiemposMedios
  inicializarArrays
  main
- medirTiempo
  menuAlgoritmo
  nularColumna
  numAleatorio
+ obtenerProcesoConMayorPrioridad
  ordenarProcesos
  renombrarDatosEntrada
  reubicarProcesos
@@ -93,7 +106,7 @@ DETAILS
 Script Body
 ~~~~~~~~~~~
 
-Has 7 line(s). Calls functions:
+Has 8 line(s). Calls functions:
 
  Script-Body
  |-- comprobacionDirectorio
@@ -171,6 +184,7 @@ Has 7 line(s). Calls functions:
          |   |-- establecerPrioridad
          |   |-- fin_programa
          |   |   `-- imprimirLCyan
+         |   |-- imprimirLCyan
          |   |-- menuAlgoritmo
          |   |   |-- imprimirLCyan
          |   |   `-- scanfNumMinMax
@@ -211,24 +225,32 @@ Has 7 line(s). Calls functions:
          |   |       |   `-- imprimirErrorCritico
          |   |       `-- imprimirErrorCritico
          |   |-- aniadirSiguienteProcesoACPU
-         |   |   `-- breakpoint
+         |   |   `-- obtenerProcesoConMayorPrioridad
+         |   |       `-- breakpoint
          |   |-- calcularPosTodosProcesos
          |   |-- comprobarSiElProcesoEnCPUHaTerminado
          |   |   |-- eliminarPosProceso
          |   |   `-- eliminarProcesoDeMemoria
          |   |-- dibujarEstadoCPU
          |   |   `-- truncarBarraCPU
-         |   |       `-- colorearBarraTiempo
+         |   |       `-- colorearBarraCPU
          |   |-- dibujarMemoria
          |   |   |-- imprimirLCyan
          |   |   `-- truncarMemoria
+         |   |-- ejecucionApropiativo
+         |   |   |-- imprimirAviso
+         |   |   `-- obtenerProcesoConMayorPrioridad
+         |   |       `-- breakpoint
          |   |-- ejecutarUnCiloDeCPU
          |   |-- imprimirLCyan
          |   |-- imprimirTablaPredeterminada
          |   |   `-- imprimirTabla
+         |   |-- imprimirTiemposMedios
+         |   |   `-- imprimirLCyan
          |   `-- vaciarMemoria
          |-- escribeDatos
          |   `-- ordenarProcesos
+         |-- imprimirCabecera
          |-- imprimirLCyan
          |-- imprimirTabla
          |-- inicializarArrays
@@ -250,12 +272,19 @@ Uses feature(s): _read_
 
 Not called by script or any function (may be e.g. command_not_found_handle or called indirectly in other way).
 
+DEV_medirTiempos
+~~~~~~~~~~~~~~~~
+
+Has 4 line(s). Doesn't call other functions.
+
+Not called by script or any function (may be e.g. command_not_found_handle or called indirectly in other way).
+
 DEV_modificarMemoria
 ~~~~~~~~~~~~~~~~~~~~
 
 ____
  # Nombre: DEV_modificarMemoria
- # Date: 27/01/2020
+ # Date: 27/02/2020
  # Descripción: Función que permite manipular la memoria de forma manual. Diseñada para testear el comportamiento de esta. 
 ____
 
@@ -286,7 +315,8 @@ Has 44 line(s). Calls functions:
  |       |   `-- imprimirErrorCritico
  |       `-- imprimirErrorCritico
  |-- aniadirSiguienteProcesoACPU
- |   `-- breakpoint
+ |   `-- obtenerProcesoConMayorPrioridad
+ |       `-- breakpoint
  |-- eliminarProcesoDeMemoria
  |-- imprimirAviso
  |-- reubicarProcesos
@@ -309,7 +339,7 @@ ____
  # Date: 20/03/2020
 ____
 
-Has 35 line(s). Calls functions:
+Has 43 line(s). Calls functions:
 
  abrirInforme
  `-- imprimirLCyan
@@ -329,8 +359,7 @@ ____
  # Date: 22/02/2020
  # @param $1: Tamaño del proceso
  # @param $2/return: Variable en la que se almacenará el valor de salida de esta función
- # @return posición en la que empieza el huevo ó null si no hay suficiente hueco.
- # 	return por stdout, es necesario = la llamada de la función a una variable para "capturar" el return.
+ # @return posición en la que empieza el hueco ó null si no hay suficiente hueco.
 ____
 
 Has 13 line(s). Calls functions:
@@ -419,10 +448,11 @@ ____
  # Descripción: De entre todos los procesos en memoria, añade el proces con la prioridad más alta a CPU
 ____
 
-Has 34 line(s). Calls functions:
+Has 6 line(s). Calls functions:
 
  aniadirSiguienteProcesoACPU
- `-- breakpoint
+ `-- obtenerProcesoConMayorPrioridad
+     `-- breakpoint
 
 Called by:
 
@@ -481,6 +511,7 @@ ____
  # Date: 21/02/2020
  # Descripción: Permite realizar una parada del programa en cualquier punto del código hasta que no se realizar una entrada por teclado.
  # Uso: Activar o desactivar la variable global $BREAKPOINT_ENABLED para activar o desactivar los breakpoints.
+ # Nota: En algunos puntos del programa, si ocurre un fallo específico, se lanza un breakpoint, fueron usados durante el desarrollo.
  # Globales: BREAKPOINT_ENABLED
  # @param $@: Imprime todos los stings pasados como argumento, por si se quieren visualizar variables. 
 ____
@@ -492,7 +523,7 @@ Uses feature(s): _read_
 Called by:
 
  aniadirProcesoAMemoria
- aniadirSiguienteProcesoACPU
+ obtenerProcesoConMayorPrioridad
  reubicarProcesos
 
 calcularPosProceso
@@ -537,7 +568,7 @@ ____
  # Descripcion: muestra las opciones de inicio del programa si los datos es por fichero, teclado o automáticos
 ____
 
-Has 38 line(s). Calls functions:
+Has 39 line(s). Calls functions:
 
  cargaDatos
  |-- datosAleatorios
@@ -594,6 +625,7 @@ Has 38 line(s). Calls functions:
  |-- establecerPrioridad
  |-- fin_programa
  |   `-- imprimirLCyan
+ |-- imprimirLCyan
  |-- menuAlgoritmo
  |   |-- imprimirLCyan
  |   `-- scanfNumMinMax
@@ -614,10 +646,16 @@ Called by:
  datosFichero
  main
 
-colorearBarraTiempo
-~~~~~~~~~~~~~~~~~~~
+colorearBarraCPU
+~~~~~~~~~~~~~~~~
 
-Has 13 line(s). Doesn't call other functions.
+____
+ # Nombre: colorearBarraCPU
+ # Descripción: Rellena el array barraTiempoColor[] con la barra de tiempo coloreada, donde cada posición es un proceso en una unidad de tiempo.
+ # Date: 09/03/2020
+____
+
+Has 16 line(s). Doesn't call other functions.
 
 Called by:
 
@@ -827,9 +865,10 @@ datosFichero
 ____
  # Nombre: datosFichero
  # Descripcion: Opción 2: Por datos. Recoge todos los datos a través del fichero
+ # Date: 24/03/2020 Actualización: Añadida memoria + apropiativo
 ____
 
-Has 39 line(s). Calls functions:
+Has 44 line(s). Calls functions:
 
  datosFichero
  |-- asignarColoresTabla
@@ -859,6 +898,7 @@ Has 39 line(s). Calls functions:
  |   |-- establecerPrioridad
  |   |-- fin_programa
  |   |   `-- imprimirLCyan
+ |   |-- imprimirLCyan
  |   |-- menuAlgoritmo
  |   |   |-- imprimirLCyan
  |   |   `-- scanfNumMinMax
@@ -980,7 +1020,7 @@ Has 23 line(s). Calls functions:
 
  dibujarEstadoCPU
  `-- truncarBarraCPU
-     `-- colorearBarraTiempo
+     `-- colorearBarraCPU
 
 Called by:
 
@@ -1015,7 +1055,7 @@ ____
  # Descripción: Loop central con la ejecución de los procesos
 ____
 
-Has 94 line(s). Calls functions:
+Has 89 line(s). Calls functions:
 
  ejecucion
  |-- anadirCola
@@ -1043,21 +1083,28 @@ Has 94 line(s). Calls functions:
  |       |   `-- imprimirErrorCritico
  |       `-- imprimirErrorCritico
  |-- aniadirSiguienteProcesoACPU
- |   `-- breakpoint
+ |   `-- obtenerProcesoConMayorPrioridad
+ |       `-- breakpoint
  |-- calcularPosTodosProcesos
  |-- comprobarSiElProcesoEnCPUHaTerminado
  |   |-- eliminarPosProceso
  |   `-- eliminarProcesoDeMemoria
  |-- dibujarEstadoCPU
  |   `-- truncarBarraCPU
- |       `-- colorearBarraTiempo
+ |       `-- colorearBarraCPU
  |-- dibujarMemoria
  |   |-- imprimirLCyan
  |   `-- truncarMemoria
+ |-- ejecucionApropiativo
+ |   |-- imprimirAviso
+ |   `-- obtenerProcesoConMayorPrioridad
+ |       `-- breakpoint
  |-- ejecutarUnCiloDeCPU
  |-- imprimirLCyan
  |-- imprimirTablaPredeterminada
  |   `-- imprimirTabla
+ |-- imprimirTiemposMedios
+ |   `-- imprimirLCyan
  `-- vaciarMemoria
 
 Uses feature(s): _read_
@@ -1065,6 +1112,26 @@ Uses feature(s): _read_
 Called by:
 
  main
+
+ejecucionApropiativo
+~~~~~~~~~~~~~~~~~~~~
+
+____
+ # Nombre: ejecucionApropiativo
+ # Descripción: Realiza los cambios en CPU de los procesos si el modo apropiativo está activado ($opcionApropiativo = s)
+ # Date: 23/03/2020
+____
+
+Has 21 line(s). Calls functions:
+
+ ejecucionApropiativo
+ |-- imprimirAviso
+ `-- obtenerProcesoConMayorPrioridad
+     `-- breakpoint
+
+Called by:
+
+ ejecucion
 
 ejecutarUnCiloDeCPU
 ~~~~~~~~~~~~~~~~~~~
@@ -1078,7 +1145,7 @@ ____
  #	-Actualiza la línea de estado de CPU
 ____
 
-Has 11 line(s). Doesn't call other functions.
+Has 18 line(s). Doesn't call other functions.
 
 Called by:
 
@@ -1154,6 +1221,20 @@ Called by:
 
  ajustarMemoriaParaElProceso
 
+esEntero
+~~~~~~~~
+
+____
+ # Nombre: esEntero
+ # Descripción: Comprueba si el parámetro $1 es entero, y lanza un "true" al stdout
+ # @param $1: Número a comprobar
+ # return: "true o false" por un echo, hay que capturalo
+____
+
+Has 5 line(s). Doesn't call other functions.
+
+Not called by script or any function (may be e.g. command_not_found_handle or called indirectly in other way).
+
 escribeDatos
 ~~~~~~~~~~~~
 
@@ -1162,7 +1243,7 @@ ____
  # Descripcion: sobrescribe los datos en datos.txt, si no existe lo crea
 ____
 
-Has 36 line(s). Calls functions:
+Has 35 line(s). Calls functions:
 
  escribeDatos
  `-- ordenarProcesos
@@ -1226,6 +1307,8 @@ Has 2 line(s). Calls functions:
  fin_programa
  `-- imprimirLCyan
 
+Uses feature(s): _kill_
+
 Called by:
 
  cargaDatos
@@ -1268,7 +1351,7 @@ ____
  # Date: Pues no lo sé
 ____
 
-Has 118 line(s). Calls functions:
+Has 114 line(s). Calls functions:
 
  global
  |-- creacionDeDirectorios
@@ -1336,6 +1419,7 @@ Has 118 line(s). Calls functions:
      |   |-- establecerPrioridad
      |   |-- fin_programa
      |   |   `-- imprimirLCyan
+     |   |-- imprimirLCyan
      |   |-- menuAlgoritmo
      |   |   |-- imprimirLCyan
      |   |   `-- scanfNumMinMax
@@ -1376,24 +1460,32 @@ Has 118 line(s). Calls functions:
      |   |       |   `-- imprimirErrorCritico
      |   |       `-- imprimirErrorCritico
      |   |-- aniadirSiguienteProcesoACPU
-     |   |   `-- breakpoint
+     |   |   `-- obtenerProcesoConMayorPrioridad
+     |   |       `-- breakpoint
      |   |-- calcularPosTodosProcesos
      |   |-- comprobarSiElProcesoEnCPUHaTerminado
      |   |   |-- eliminarPosProceso
      |   |   `-- eliminarProcesoDeMemoria
      |   |-- dibujarEstadoCPU
      |   |   `-- truncarBarraCPU
-     |   |       `-- colorearBarraTiempo
+     |   |       `-- colorearBarraCPU
      |   |-- dibujarMemoria
      |   |   |-- imprimirLCyan
      |   |   `-- truncarMemoria
+     |   |-- ejecucionApropiativo
+     |   |   |-- imprimirAviso
+     |   |   `-- obtenerProcesoConMayorPrioridad
+     |   |       `-- breakpoint
      |   |-- ejecutarUnCiloDeCPU
      |   |-- imprimirLCyan
      |   |-- imprimirTablaPredeterminada
      |   |   `-- imprimirTabla
+     |   |-- imprimirTiemposMedios
+     |   |   `-- imprimirLCyan
      |   `-- vaciarMemoria
      |-- escribeDatos
      |   `-- ordenarProcesos
+     |-- imprimirCabecera
      |-- imprimirLCyan
      |-- imprimirTabla
      |-- inicializarArrays
@@ -1421,6 +1513,7 @@ Called by:
  DEV_modificarMemoria
  ajustarMemoriaParaElProceso
  datosFichero
+ ejecucionApropiativo
  scanfNum
  scanfNumMinMax
  scanfSiNo
@@ -1437,7 +1530,9 @@ ____
 
 Has 26 line(s). Doesn't call other functions.
 
-Not called by script or any function (may be e.g. command_not_found_handle or called indirectly in other way).
+Called by:
+
+ main
 
 imprimirErrorCritico
 ~~~~~~~~~~~~~~~~~~~~
@@ -1472,11 +1567,13 @@ Has 1 line(s). Doesn't call other functions.
 Called by:
 
  abrirInforme
+ cargaDatos
  comprobacionDirectorio
  datosFichero
  dibujarMemoria
  ejecucion
  fin_programa
+ imprimirTiemposMedios
  main
  menuAlgoritmo
  scanfNum
@@ -1491,13 +1588,13 @@ imprimirTabla
 ____
  # Nombre: imprimirTabla
  # Descripcion: imprime las columnas del array procesos pasado como parámetro
- # Versión 2.0 (Original imprimirTablaOld())
+ # Versión 2.0
  # Date: 6/03/2020
  # Nota 2020: Adaptada a los requisitos exigidos en el curso 18-19 y 19-20 (Tabla compacta roñosa)
  # @param $@ (todos): índice de las columnas que se quiere imprimir en pantalla
 ____
 
-Has 23 line(s). Doesn't call other functions.
+Has 25 line(s). Doesn't call other functions.
 
 Called by:
 
@@ -1519,10 +1616,27 @@ ____
  #	He decidido hacer esto por dos razones: 1º: Puedo reutilizar la tabla en la entrada de datos con 4 columnas 2º: Puedo poner la cabecera fija cómodamente.
 ____
 
-Has 5 line(s). Calls functions:
+Has 3 line(s). Calls functions:
 
  imprimirTablaPredeterminada
  `-- imprimirTabla
+
+Called by:
+
+ ejecucion
+
+imprimirTiemposMedios
+~~~~~~~~~~~~~~~~~~~~~
+
+____
+ # Nombre: imprimirTiemposMedios
+ # Descripción: Imprime los tiempos medios del sistema.
+____
+
+Has 37 line(s). Calls functions:
+
+ imprimirTiemposMedios
+ `-- imprimirLCyan
 
 Called by:
 
@@ -1546,10 +1660,12 @@ main
 ~~~~
 
 ____
- #main
+ # Nombre: main
+ # Descripción: Main del programa
+ # Se llama desde global para poder cargar todas las variables globales
 ____
 
-Has 27 line(s). Calls functions:
+Has 24 line(s). Calls functions:
 
  main
  |-- cargaDatos
@@ -1607,6 +1723,7 @@ Has 27 line(s). Calls functions:
  |   |-- establecerPrioridad
  |   |-- fin_programa
  |   |   `-- imprimirLCyan
+ |   |-- imprimirLCyan
  |   |-- menuAlgoritmo
  |   |   |-- imprimirLCyan
  |   |   `-- scanfNumMinMax
@@ -1647,24 +1764,32 @@ Has 27 line(s). Calls functions:
  |   |       |   `-- imprimirErrorCritico
  |   |       `-- imprimirErrorCritico
  |   |-- aniadirSiguienteProcesoACPU
- |   |   `-- breakpoint
+ |   |   `-- obtenerProcesoConMayorPrioridad
+ |   |       `-- breakpoint
  |   |-- calcularPosTodosProcesos
  |   |-- comprobarSiElProcesoEnCPUHaTerminado
  |   |   |-- eliminarPosProceso
  |   |   `-- eliminarProcesoDeMemoria
  |   |-- dibujarEstadoCPU
  |   |   `-- truncarBarraCPU
- |   |       `-- colorearBarraTiempo
+ |   |       `-- colorearBarraCPU
  |   |-- dibujarMemoria
  |   |   |-- imprimirLCyan
  |   |   `-- truncarMemoria
+ |   |-- ejecucionApropiativo
+ |   |   |-- imprimirAviso
+ |   |   `-- obtenerProcesoConMayorPrioridad
+ |   |       `-- breakpoint
  |   |-- ejecutarUnCiloDeCPU
  |   |-- imprimirLCyan
  |   |-- imprimirTablaPredeterminada
  |   |   `-- imprimirTabla
+ |   |-- imprimirTiemposMedios
+ |   |   `-- imprimirLCyan
  |   `-- vaciarMemoria
  |-- escribeDatos
  |   `-- ordenarProcesos
+ |-- imprimirCabecera
  |-- imprimirLCyan
  |-- imprimirTabla
  |-- inicializarArrays
@@ -1677,13 +1802,6 @@ Called by:
 
  global
 
-medirTiempo
-~~~~~~~~~~~
-
-Has 4 line(s). Doesn't call other functions.
-
-Not called by script or any function (may be e.g. command_not_found_handle or called indirectly in other way).
-
 menuAlgoritmo
 ~~~~~~~~~~~~~
 
@@ -1692,7 +1810,7 @@ ____
  # Descripcion: menu para elegir las opciones del algoritmo, más info en la opcion 5 Ayuda (glosario)
 ____
 
-Has 44 line(s). Calls functions:
+Has 37 line(s). Calls functions:
 
  menuAlgoritmo
  |-- imprimirLCyan
@@ -1742,6 +1860,29 @@ Called by:
 
  datosAleatorios
 
+obtenerProcesoConMayorPrioridad
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+____
+ # Nombre: obtenerProcesoConMayorPrioridad
+ # Descripción: De entre todos los procesos qeu están en memoria, selecciona el proceso con la prioridad más alta.
+ # Nota: De entre dos procesosos con la misma prioridad, entra el que haya llegado antes a memoria.
+ # Date: 23/03/2020
+ # @Param $1: [return] Variable en la que almacenar el índice del proceso
+____
+
+Has 31 line(s). Calls functions:
+
+ obtenerProcesoConMayorPrioridad
+ `-- breakpoint
+
+Uses feature(s): _eval_
+
+Called by:
+
+ aniadirSiguienteProcesoACPU
+ ejecucionApropiativo
+
 ordenarProcesos
 ~~~~~~~~~~~~~~~
 
@@ -1790,7 +1931,7 @@ reubicarProcesos
 
 ____
  # Nombre: reubicarProcesos
- # date: 22/03/2020
+ # date: 22/02/2020
  # Descripción: Reubica la memoria
  # Nota del autor: Si no hubiese hecho el array bidimensional, esto podría haber sído un simple oneLiner que ordenase el array de menor a mayor
  # 	(No he tenido en cuenta donde irían los nulls, pero podrían haber sido sustiutidos por 0 )
@@ -1816,8 +1957,6 @@ ____
  # Descripcion: imprime en pantalla un aviso de error al introducir un dato con letras y para la ejecucion.
  # @param $1: texto de aviso
  # Date 21/02/2020
- #//@see  ErrorCritio
- #//@see  forzarCierre
 ____
 
 Has 2 line(s). Calls functions:
@@ -1981,10 +2120,10 @@ ____
  #		Podría hacerse en una misma función, pero los parámetros en Bash son un dolor, y paso de perder el tiempo haciendo un código de muy alta calidad.
 ____
 
-Has 40 line(s). Calls functions:
+Has 53 line(s). Calls functions:
 
  truncarBarraCPU
- `-- colorearBarraTiempo
+ `-- colorearBarraCPU
 
 Called by:
 
@@ -2001,7 +2140,7 @@ ____
  #		este nuevo string permite representar la memoria de forma dínamica, dependiendo del ancho del terminal.
 ____
 
-Has 37 line(s). Doesn't call other functions.
+Has 43 line(s). Doesn't call other functions.
 
 Called by:
 

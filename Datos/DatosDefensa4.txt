@@ -1,0 +1,19 @@
+Tamaño Memoria:20
+Apropiativo:n
+Prioridad Mínima:20
+Prioridad Máxima:-10
+T.Lleg	T.Ejec	Prior	Tamaño
+4	2	5	8	
+5	7	3	9	
+3	6	-4	5	
+6	3	-8	12	
+7	3	-4	3	
+4	3	6	12	
+2	5	15	4	
+2	5	3	7	
+2	5	3	5	
+2	4	3	6	
+3	5	6	6	
+3	5	6	3	
+3	9	4	10	
+5	5	5	5	
