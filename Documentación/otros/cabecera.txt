@@ -1,0 +1,29 @@
+Prioridad Mayor - Según Necesidades - Continua - Reubicable
+===========================================================
+:compat-mode!:
+:toc: left
+
+ALUMNO
+------
+ Jorge Ruiz Gómez
+ ⠀
+ Sistemas Operativos
+ ⠀
+ Curso 2019-2020
+
+INFORMACIÓN
+-----------
+ Script programado para la asignatura Sistemas Operativos
+ ⠀
+ Permite simular el comportamiento de un algoritmo de gestión de memoria y procesos.
+ Algoritmo de gestión de memoria:
+     >Primero en llegar al Sistema
+     Memoria Según Necesidades
+         Distribución de la memoria: Contínua
+         Gestión de la memoria: Reubicable
+ ⠀
+ Algoritmo de gestión de procesos:
+     >Prioridades
+     Tienen prioridad los que tengan la prioridad más alta (y si son iguales, el algoritmo que  haya lleado más pronto al sistema entra en CPU)
+
+
